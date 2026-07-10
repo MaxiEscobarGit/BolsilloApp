@@ -4,7 +4,6 @@ import bolsilloApp.api.auth.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -28,11 +27,19 @@ public class Category {
     @Column(nullable = false)
     private String name;
 
-    private String icon;
+    @Column(nullable = false)
+    private String emoji;
+
+    @Column(name = "color_hex", nullable = false, length = 7)
+    private String colorHex;
+
+    @Column(nullable = false)
+    private String type;
+
+    @Builder.Default
+    @Column(name = "is_system", nullable = false)
+    private Boolean isSystem = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

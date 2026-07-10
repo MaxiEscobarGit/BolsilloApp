@@ -8,6 +8,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,22 +28,32 @@ public class Debt {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
-    private String personName;
-
-    @Column(nullable = false)
-    private Long amountCents;
+    @Column(name = "counterpart_name", nullable = false)
+    private String counterpartName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DebtDirection direction;
+
+    @Column(name = "amount_cents", nullable = false)
+    private Long amountCents;
+
+    @Builder.Default
+    @Column(nullable = false, length = 3)
+    private String currency = "ARS";
+
+    private String description;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private DebtStatus status = DebtStatus.PENDING;
 
-    private String description;
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

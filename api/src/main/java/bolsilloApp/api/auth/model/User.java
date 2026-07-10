@@ -27,15 +27,21 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "display_name", nullable = false)
+    private String displayName;
 
     @Builder.Default
+    @Column(name = "default_currency", nullable = false, length = 3)
+    private String defaultCurrency = "ARS";
+
+    @Builder.Default
+    @Column(name = "ai_messages_used", nullable = false)
     private Integer aiMessagesUsed = 0;
 
+    @Column(name = "ai_messages_reset_at", nullable = false)
     private LocalDateTime aiMessagesResetAt;
 
     @CreationTimestamp
@@ -47,6 +53,11 @@ public class User implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
+    }
+
+    @Override
+    public String getPassword() {
+        return passwordHash;
     }
 
     @Override

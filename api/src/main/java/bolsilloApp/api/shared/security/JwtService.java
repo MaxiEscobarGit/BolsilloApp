@@ -9,10 +9,10 @@ import java.util.UUID;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
 
-    @Value("${jwt.expiration-ms}")
+    @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
     public String generateToken(UUID userId, String email) {

@@ -1,0 +1,28 @@
+# Variables de entorno — NUNCA subir
+.env
+api/.env
+
+# Maven
+api/target/
+api/*.jar
+
+# IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker override
+docker-compose.override.yml
+
+# Claude Code
+.claude/settings.local.json

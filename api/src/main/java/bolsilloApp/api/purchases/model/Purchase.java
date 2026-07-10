@@ -1,10 +1,10 @@
 package bolsilloApp.api.purchases.model;
 
 import bolsilloApp.api.auth.model.User;
+import bolsilloApp.api.categories.model.Category;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,18 +29,24 @@ public class Purchase {
     @Column(nullable = false)
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "total_amount_cents", nullable = false)
     private Long totalAmountCents;
 
-    @Column(nullable = false)
-    private Integer installments;
+    @Builder.Default
+    @Column(nullable = false, length = 3)
+    private String currency = "ARS";
 
-    @Column(nullable = false)
-    private LocalDate startDate;
+    @Builder.Default
+    @Column(name = "total_installments", nullable = false)
+    private Integer totalInstallments = 1;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
+
+    @Column(name = "purchase_date", nullable = false)
+    private LocalDate purchaseDate;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }
