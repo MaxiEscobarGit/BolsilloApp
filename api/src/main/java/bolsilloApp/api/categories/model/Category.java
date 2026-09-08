@@ -33,8 +33,9 @@ public class Category {
     @Column(name = "color_hex", nullable = false, length = 7)
     private String colorHex;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String type;
+    private CategoryType type;
 
     @Builder.Default
     @Column(name = "is_system", nullable = false)

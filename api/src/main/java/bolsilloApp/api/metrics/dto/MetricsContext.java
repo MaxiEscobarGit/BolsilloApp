@@ -8,7 +8,10 @@ public record MetricsContext(
         Long totalExpenseCents,
         Long balanceCents,
         Map<String, Long> expenseByCategory,
-        List<UpcomingInstallment> upcomingInstallments
+        Map<String, Long> incomeByCategory,
+        List<UpcomingInstallment> upcomingInstallments,
+        List<ActiveDebt> activeDebts
 ) {
     public record UpcomingInstallment(String description, Long amountCents, String dueDate) {}
+    public record ActiveDebt(String counterpartName, String direction, Long amountCents) {}
 }

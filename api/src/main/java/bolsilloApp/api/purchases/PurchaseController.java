@@ -23,7 +23,7 @@ public class PurchaseController {
     public ResponseEntity<PurchaseResponse> create(
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody CreatePurchaseRequest request) {
-        return ResponseEntity.ok(purchaseService.create(currentUser.getId(), request));
+        return ResponseEntity.status(201).body(purchaseService.create(currentUser.getId(), request));
     }
 
     @GetMapping

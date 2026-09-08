@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.YearMonth;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/metrics")
@@ -19,8 +19,9 @@ public class MetricsController {
     @GetMapping("/summary")
     public ResponseEntity<SummaryResponse> getSummary(
             @AuthenticationPrincipal User currentUser,
-            @RequestParam(required = false) String period) {
-        YearMonth yearMonth = period != null ? YearMonth.parse(period) : YearMonth.now();
-        return ResponseEntity.ok(metricsService.getSummary(currentUser.getId(), yearMonth));
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to) {
+        return ResponseEntity.ok(metricsService.getSummary(currentUser.getId(), period, from, to));
     }
 }

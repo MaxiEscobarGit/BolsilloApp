@@ -1,14 +1,16 @@
 package bolsilloApp.api.purchases.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record CreatePurchaseRequest(
         @NotBlank String description,
-        @NotNull @Min(1) Long totalAmountCents,
-        @NotNull @Min(1) Integer installments,
-        @NotNull LocalDate startDate
+        @NotNull @Positive BigDecimal totalAmount,
+        @NotNull Integer installments,
+        @NotNull UUID categoryId,
+        @NotNull LocalDate purchaseDate,
+        String currency
 ) {}

@@ -23,12 +23,15 @@ public class DebtController {
     public ResponseEntity<DebtResponse> create(
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody CreateDebtRequest request) {
-        return ResponseEntity.ok(debtService.create(currentUser.getId(), request));
+        return ResponseEntity.status(201).body(debtService.create(currentUser.getId(), request));
     }
 
     @GetMapping
-    public ResponseEntity<List<DebtResponse>> findAll(@AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(debtService.findAll(currentUser.getId()));
+    public ResponseEntity<List<DebtResponse>> findAll(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam(required = false) DebtStatus status,
+            @RequestParam(required = false) DebtDirection direction) {
+        return ResponseEntity.ok(debtService.findAll(currentUser.getId(), status, direction));
     }
 
     @GetMapping("/{id}")

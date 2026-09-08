@@ -19,31 +19,16 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @PostMapping
-    public ResponseEntity<CategoryResponse> create(
-            @AuthenticationPrincipal User currentUser,
-            @Valid @RequestBody CreateCategoryRequest request) {
-        return ResponseEntity.ok(categoryService.create(currentUser.getId(), request));
-    }
-
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> findAll(@AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(categoryService.findAll(currentUser.getId()));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponse> findById(
+    @PostMapping
+    public ResponseEntity<CategoryResponse> create(
             @AuthenticationPrincipal User currentUser,
-            @PathVariable UUID id) {
-        return ResponseEntity.ok(categoryService.findById(currentUser.getId(), id));
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponse> update(
-            @AuthenticationPrincipal User currentUser,
-            @PathVariable UUID id,
             @Valid @RequestBody CreateCategoryRequest request) {
-        return ResponseEntity.ok(categoryService.update(currentUser.getId(), id, request));
+        return ResponseEntity.status(201).body(categoryService.create(currentUser.getId(), request));
     }
 
     @DeleteMapping("/{id}")

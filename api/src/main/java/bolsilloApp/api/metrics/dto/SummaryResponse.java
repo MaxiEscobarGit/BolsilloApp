@@ -1,12 +1,20 @@
 package bolsilloApp.api.metrics.dto;
 
-import java.time.YearMonth;
+import java.time.LocalDate;
+import java.util.List;
 
 public record SummaryResponse(
-        YearMonth period,
-        Long totalIncomeCents,
+        LocalDate from,
+        LocalDate to,
         Long totalExpenseCents,
+        Long totalIncomeCents,
         Long balanceCents,
-        Long totalDebtOwedCents,
-        Long totalDebtOweCents
-) {}
+        List<CategoryTotal> byCategory,
+        List<DailyTotal> dailyTotals,
+        PeriodComparison vsPreviousPeriod
+) {
+    public record CategoryTotal(String categoryName, String type, Long totalCents) {}
+    public record DailyTotal(LocalDate date, Long expenseCents, Long incomeCents) {}
+    public record PeriodComparison(Long previousExpenseCents, Long previousIncomeCents,
+                                    Double expenseChangePercent, Double incomeChangePercent) {}
+}
