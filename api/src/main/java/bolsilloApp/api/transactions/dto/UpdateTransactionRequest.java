@@ -12,5 +12,6 @@ public record UpdateTransactionRequest(
         String description,
         UUID categoryId,
         LocalDate transactionDate,
-        String currency
+        String currency,
+        BigDecimal exchangeRate
 ) {}

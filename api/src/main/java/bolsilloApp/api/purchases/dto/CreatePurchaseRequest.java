@@ -12,5 +12,6 @@ public record CreatePurchaseRequest(
         @NotNull Integer installments,
         @NotNull UUID categoryId,
         @NotNull LocalDate purchaseDate,
-        String currency
+        String currency,
+        BigDecimal exchangeRate
 ) {}

@@ -1,13 +1,19 @@
 package bolsilloApp.api.transactions;
 
+import bolsilloApp.api.auth.AuthRepository;
 import bolsilloApp.api.auth.model.User;
 import bolsilloApp.api.categories.CategoryRepository;
+import bolsilloApp.api.exchangerates.ExchangeRateService;
 import bolsilloApp.api.shared.exception.ApiException;
 import bolsilloApp.api.transactions.dto.CreateTransactionRequest;
+import bolsilloApp.api.transactions.dto.TransactionListResponse;
 import bolsilloApp.api.transactions.dto.TransactionResponse;
 import bolsilloApp.api.transactions.dto.UpdateTransactionRequest;
 import bolsilloApp.api.transactions.model.Transaction;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +30,8 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
+    private final ExchangeRateService exchangeRateService;
+    private final AuthRepository authRepository;
 
     @Transactional
     public TransactionResponse create(UUID userId, CreateTransactionRequest request) {
@@ -39,17 +47,10 @@ public class TransactionService {
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValue();
 
-        // For now, simple 1:1 conversion if ARS, otherwise store as-is
-        // Real exchange rate integration would use exchange_rates table
-        BigDecimal exchangeRate = BigDecimal.ONE;
-        Long amountArsCents = amountCents;
+        BigDecimal exchangeRate = resolveExchangeRate(
+                currency, request.exchangeRate(), request.transactionDate(), userId);
 
-        if (!"ARS".equals(currency)) {
-            // TODO: Look up exchange rate from exchange_rates table
-            // For MVP, store the same amount and rate 1:1, to be enhanced later
-            exchangeRate = BigDecimal.ONE;
-            amountArsCents = amountCents;
-        }
+        Long amountArsCents = computeAmountArsCents(amountCents, exchangeRate);
 
         var transaction = Transaction.builder()
                 .user(User.builder().id(userId).build())
@@ -68,7 +69,7 @@ public class TransactionService {
         return toResponse(transactionRepository.save(transaction));
     }
 
-    public List<TransactionResponse> findAll(UUID userId, LocalDate from, LocalDate to,
+    public TransactionListResponse findAll(UUID userId, LocalDate from, LocalDate to,
                                               UUID categoryId, TransactionType type,
                                               int limit, int offset) {
         if (from != null && to != null && from.plusYears(1).isBefore(to)) {
@@ -77,18 +78,20 @@ public class TransactionService {
 
         int effectiveLimit = Math.min(limit, 200);
 
-        // ponytail: filter in Java — PostgreSQL can't infer types for nullable JPQL params.
-        // Upgrade to CriteriaBuilder when query volume justifies it.
-        return transactionRepository.findAllByUserIdAndNotDeleted(userId)
-                .stream()
-                .filter(t -> from == null || !t.getTransactionDate().isBefore(from))
-                .filter(t -> to == null || !t.getTransactionDate().isAfter(to))
-                .filter(t -> categoryId == null || t.getCategory().getId().equals(categoryId))
-                .filter(t -> type == null || t.getType() == type)
-                .skip(offset)
-                .limit(effectiveLimit)
+        Specification<Transaction> spec = TransactionSpecification.buildSpec(userId, from, to, categoryId, type);
+
+        // Page number is derived from offset and limit (offset-based pagination)
+        int pageNumber = offset / effectiveLimit;
+        var pageable = PageRequest.of(pageNumber, effectiveLimit,
+                Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt")));
+
+        var page = transactionRepository.findAll(spec, pageable);
+
+        List<TransactionResponse> data = page.getContent().stream()
                 .map(this::toResponse)
                 .toList();
+
+        return new TransactionListResponse(data, page.getTotalElements(), effectiveLimit, offset);
     }
 
     public TransactionResponse findById(UUID userId, UUID id) {
@@ -102,7 +105,7 @@ public class TransactionService {
         var transaction = transactionRepository.findByIdAndUserIdAndDeletedAtIsNull(id, userId)
                 .orElseThrow(() -> new ApiException("Transaction not found", "NOT_FOUND", 404));
 
-        boolean amountOrCurrencyChanged = false;
+        boolean needsRateRecalc = false;
 
         if (request.amount() != null) {
             Long amountCents = request.amount()
@@ -110,12 +113,12 @@ public class TransactionService {
                     .setScale(0, RoundingMode.HALF_UP)
                     .longValue();
             transaction.setAmountCents(amountCents);
-            amountOrCurrencyChanged = true;
+            needsRateRecalc = true;
         }
 
         if (request.currency() != null && !request.currency().isBlank()) {
             transaction.setCurrency(request.currency().toUpperCase());
-            amountOrCurrencyChanged = true;
+            needsRateRecalc = true;
         }
 
         if (request.type() != null) {
@@ -135,18 +138,15 @@ public class TransactionService {
         if (request.transactionDate() != null) {
             validateTransactionDate(request.transactionDate());
             transaction.setTransactionDate(request.transactionDate());
+            needsRateRecalc = true;
         }
 
-        // Recalculate ARS conversion if amount or currency changed
-        if (amountOrCurrencyChanged) {
-            if ("ARS".equals(transaction.getCurrency())) {
-                transaction.setExchangeRate(BigDecimal.ONE);
-                transaction.setAmountArsCents(transaction.getAmountCents());
-            } else {
-                // TODO: Look up exchange rate
-                transaction.setExchangeRate(BigDecimal.ONE);
-                transaction.setAmountArsCents(transaction.getAmountCents());
-            }
+        if (needsRateRecalc) {
+            BigDecimal rate = resolveExchangeRate(
+                    transaction.getCurrency(), request.exchangeRate(),
+                    transaction.getTransactionDate(), userId);
+            transaction.setExchangeRate(rate);
+            transaction.setAmountArsCents(computeAmountArsCents(transaction.getAmountCents(), rate));
         }
 
         return toResponse(transactionRepository.save(transaction));
@@ -158,6 +158,44 @@ public class TransactionService {
                 .orElseThrow(() -> new ApiException("Transaction not found", "NOT_FOUND", 404));
         transaction.setDeletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
+    }
+
+    /**
+     * Resolves the exchange rate for a transaction based on these rules:
+     * a) If currency == "ARS" -> rate = 1.0
+     * b) If the request provides an exchangeRate (non-null) -> use that
+     * c) Otherwise -> look up from exchange_rates table by (from=currency, to="ARS", date=transactionDate, source=user.preferredExchangeSource)
+     * d) If no rate found -> throw ApiException 422
+     */
+    public BigDecimal resolveExchangeRate(String currency, BigDecimal requestExchangeRate,
+                                    LocalDate transactionDate, UUID userId) {
+        if ("ARS".equals(currency)) {
+            return BigDecimal.ONE;
+        }
+
+        if (requestExchangeRate != null) {
+            return requestExchangeRate;
+        }
+
+        User user = authRepository.findById(userId)
+                .orElseThrow(() -> new ApiException("User not found", "NOT_FOUND", 404));
+
+        return exchangeRateService.getRate(currency, "ARS", transactionDate, user.getPreferredExchangeSource())
+                .orElseThrow(() -> new ApiException(
+                        "No exchange rate found for " + currency + "/ARS on " + transactionDate
+                                + " (source: " + user.getPreferredExchangeSource() + "). "
+                                + "You can provide the exchange rate in the request body as 'exchangeRate'.",
+                        "MISSING_EXCHANGE_RATE", 422));
+    }
+
+    /**
+     * Computes amount_ars_cents = round(amount_cents * rate) with HALF_UP rounding.
+     */
+    public Long computeAmountArsCents(Long amountCents, BigDecimal exchangeRate) {
+        return BigDecimal.valueOf(amountCents)
+                .multiply(exchangeRate)
+                .setScale(0, RoundingMode.HALF_UP)
+                .longValue();
     }
 
     private void validateTransactionDate(LocalDate date) {

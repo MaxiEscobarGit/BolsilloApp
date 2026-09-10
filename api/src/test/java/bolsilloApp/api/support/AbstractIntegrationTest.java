@@ -57,6 +57,7 @@ public abstract class AbstractIntegrationTest {
         jdbcTemplate.execute("DELETE FROM purchases");
         jdbcTemplate.execute("DELETE FROM debts");
         jdbcTemplate.execute("DELETE FROM refresh_tokens");
+        jdbcTemplate.execute("DELETE FROM exchange_rates");
         jdbcTemplate.execute("DELETE FROM categories WHERE user_id IS NOT NULL");
         jdbcTemplate.execute("DELETE FROM users");
     }

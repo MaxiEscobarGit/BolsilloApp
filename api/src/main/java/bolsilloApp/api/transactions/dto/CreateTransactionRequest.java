@@ -15,5 +15,6 @@ public record CreateTransactionRequest(
         @NotBlank String description,
         @NotNull UUID categoryId,
         @NotNull LocalDate transactionDate,
-        String currency
+        String currency,
+        BigDecimal exchangeRate
 ) {}

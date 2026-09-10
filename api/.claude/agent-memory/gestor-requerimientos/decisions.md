@@ -31,3 +31,11 @@
 - Decision: Save both user and assistant messages to chat_messages table
 - Includes model_used, tokens_used for cost tracking
 - transactions_created array links to created transaction IDs
+
+## D8: Transaction listing — JPA Specifications over stream filtering
+- Decision: Use JpaSpecificationExecutor + dynamic Specification building for findAll()
+- Previous approach loaded all user transactions into memory and filtered via Java streams
+- New approach builds WHERE predicates dynamically only for non-null filters (no IS NULL OR pattern)
+- Pagination via PageRequest (SQL LIMIT/OFFSET), COUNT via Page.getTotalElements()
+- Response changed from List<TransactionResponse> to TransactionListResponse (data, total, limit, offset)
+- TransactionSpecification utility class composes predicates conditionally

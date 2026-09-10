@@ -8,6 +8,7 @@ import bolsilloApp.api.purchases.dto.PurchaseResponse;
 import bolsilloApp.api.purchases.model.Purchase;
 import bolsilloApp.api.shared.exception.ApiException;
 import bolsilloApp.api.transactions.TransactionRepository;
+import bolsilloApp.api.transactions.TransactionService;
 import bolsilloApp.api.transactions.TransactionSource;
 import bolsilloApp.api.transactions.TransactionType;
 import bolsilloApp.api.transactions.model.Transaction;
@@ -29,6 +30,7 @@ public class PurchaseService {
     private final PurchaseRepository purchaseRepository;
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
+    private final TransactionService transactionService;
 
     @Transactional
     public PurchaseResponse create(UUID userId, CreatePurchaseRequest request) {
@@ -53,6 +55,10 @@ public class PurchaseService {
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValue();
 
+        // Resolve exchange rate ONCE for the entire purchase
+        BigDecimal exchangeRate = transactionService.resolveExchangeRate(
+                currency, request.exchangeRate(), request.purchaseDate(), userId);
+
         User userRef = User.builder().id(userId).build();
 
         // Create purchase
@@ -76,6 +82,7 @@ public class PurchaseService {
         for (int i = 1; i <= n; i++) {
             long installmentAmount = (i == n) ? baseAmount + remainder : baseAmount;
             LocalDate installmentDate = request.purchaseDate().plusMonths(i - 1);
+            Long installmentArsCents = transactionService.computeAmountArsCents(installmentAmount, exchangeRate);
 
             var transaction = Transaction.builder()
                     .user(userRef)
@@ -83,8 +90,8 @@ public class PurchaseService {
                     .type(TransactionType.EXPENSE)
                     .amountCents(installmentAmount)
                     .currency(currency)
-                    .amountArsCents(installmentAmount) // Same for ARS, TODO: exchange rate
-                    .exchangeRate(BigDecimal.ONE)
+                    .amountArsCents(installmentArsCents)
+                    .exchangeRate(exchangeRate)
                     .description(request.description() + " (" + i + "/" + n + ")")
                     .transactionDate(installmentDate)
                     .source(TransactionSource.MANUAL)

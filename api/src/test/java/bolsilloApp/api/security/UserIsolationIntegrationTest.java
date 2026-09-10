@@ -5,6 +5,7 @@ import bolsilloApp.api.debts.dto.DebtResponse;
 import bolsilloApp.api.purchases.dto.PurchaseResponse;
 import bolsilloApp.api.support.AbstractIntegrationTest;
 import bolsilloApp.api.support.TestDataFactory;
+import bolsilloApp.api.transactions.dto.TransactionListResponse;
 import bolsilloApp.api.transactions.dto.TransactionResponse;
 import bolsilloApp.api.transactions.dto.UpdateTransactionRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,7 +89,7 @@ class UserIsolationIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + tokenB)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(new UpdateTransactionRequest(
-                                null, null, "HACKED", null, null, null))))
+                                null, null, "HACKED", null, null, null, null))))
                 .andExpect(status().isNotFound());
 
         // Verify not modified
@@ -117,9 +118,9 @@ class UserIsolationIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        List<TransactionResponse> txns = objectMapper.readValue(
-                result.getResponse().getContentAsString(), new TypeReference<>() {});
-        assertThat(txns).noneMatch(t -> t.id().equals(txIdA));
+        var listResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), TransactionListResponse.class);
+        assertThat(listResponse.data()).noneMatch(t -> t.id().equals(txIdA));
     }
 
     // T-SEC-05

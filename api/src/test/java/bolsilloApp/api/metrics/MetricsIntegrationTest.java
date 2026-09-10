@@ -149,23 +149,32 @@ class MetricsIntegrationTest extends AbstractIntegrationTest {
         assertThat(summary.vsPreviousPeriod().expenseChangePercent()).isCloseTo(50.0, org.assertj.core.data.Offset.offset(0.1));
     }
 
-    // T-MET-06
+    // T-MET-06 — Metrics sum over amount_ars_cents computed with real exchange rate
     @Test
-    void metricasSumanSobreAmountArsCents() throws Exception {
+    void metricasSumanSobreAmountArsCentsConCotizacionReal() throws Exception {
         String token = registerAndGetToken();
         UUID catId = getSystemExpenseCategoryId();
         LocalDate today = LocalDate.now();
 
-        // Create a USD transaction — both amount_cents and amount_ars_cents are same (MVP rate=1)
-        // but the metric queries use amount_ars_cents
+        // Insert a real exchange rate for USD -> ARS on today's date
+        BigDecimal rate = new java.math.BigDecimal("1150.000000");
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", rate, today, "blue");
+
+        // Create a USD expense of $50.00 (5000 cents) without providing exchangeRate in request
+        // The service should look up the rate from exchange_rates table
         String body = String.format("""
-                {"amount":100,"type":"EXPENSE","description":"USD test","categoryId":"%s","transactionDate":"%s","currency":"USD"}
+                {"amount":50,"type":"EXPENSE","description":"USD metrics test","categoryId":"%s","transactionDate":"%s","currency":"USD"}
                 """, catId, today);
         mockMvc.perform(post("/api/transactions")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated());
+
+        // Also create an ARS expense of $200.00 (20000 cents)
+        createTransaction(token, catId, "200.00", TransactionType.EXPENSE, today);
 
         var result = mockMvc.perform(get("/api/metrics/summary")
                         .header("Authorization", "Bearer " + token)
@@ -175,10 +184,14 @@ class MetricsIntegrationTest extends AbstractIntegrationTest {
 
         var summary = objectMapper.readValue(result.getResponse().getContentAsString(), SummaryResponse.class);
 
-        // Verify metric uses amount_ars_cents (10000 in MVP since rate=1)
-        Long arsInDb = jdbcTemplate.queryForObject(
-                "SELECT amount_ars_cents FROM transactions WHERE description = 'USD test'", Long.class);
-        assertThat(summary.totalExpenseCents()).isEqualTo(arsInDb);
+        // USD: amount_ars_cents = round(5000 * 1150) = 5750000
+        Long usdArsCents = jdbcTemplate.queryForObject(
+                "SELECT amount_ars_cents FROM transactions WHERE description = 'USD metrics test'", Long.class);
+        assertThat(usdArsCents).isEqualTo(5750000L);
+
+        // ARS: amount_ars_cents = 20000 (rate=1)
+        // Total expense = 5750000 + 20000 = 5770000
+        assertThat(summary.totalExpenseCents()).isEqualTo(5770000L);
     }
 
     // T-MET-07

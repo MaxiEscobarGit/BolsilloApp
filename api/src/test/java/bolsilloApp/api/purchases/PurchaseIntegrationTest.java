@@ -133,32 +133,9 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnprocessableEntity());
     }
 
-    // T-PUR-05 — atomicity test: mock repo to fail on Nth installment
-    // This test uses a real DB, so we force a failure by using invalid data
-    // that would cause a DB constraint violation after some inserts.
-    // Since @Transactional should rollback, neither purchase nor transactions should exist.
-    @Test
-    void atomicidadSiAlgoFallaNoQuedaNadaEnLaBase() throws Exception {
-        String token = registerAndGetToken();
-        UUID catId = getSystemExpenseCategoryId();
-
-        int purchasesBefore = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM purchases", Integer.class);
-        int txsBefore = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM transactions", Integer.class);
-
-        // Use installments = -1 which passes to the service but triggers our 422 validation
-        var req = TestDataFactory.purchaseRequest(catId, new BigDecimal("100"), -1);
-        mockMvc.perform(post("/api/purchases")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(req)))
-                .andExpect(status().isUnprocessableEntity());
-
-        // Nothing should have been created
-        int purchasesAfter = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM purchases", Integer.class);
-        int txsAfter = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM transactions", Integer.class);
-        assertThat(purchasesAfter).isEqualTo(purchasesBefore);
-        assertThat(txsAfter).isEqualTo(txsBefore);
-    }
+    // T-PUR-05 -- Real atomicity test moved to PurchaseAtomicityTest.java
+    // Uses @SpyBean on TransactionRepository to simulate failure on 3rd installment save
+    // and verifies rollback of both purchase and transaction rows.
 
     // T-PUR-06
     @Test

@@ -4,6 +4,7 @@ import bolsilloApp.api.categories.dto.CategoryResponse;
 import bolsilloApp.api.support.AbstractIntegrationTest;
 import bolsilloApp.api.support.TestDataFactory;
 import bolsilloApp.api.transactions.dto.CreateTransactionRequest;
+import bolsilloApp.api.transactions.dto.TransactionListResponse;
 import bolsilloApp.api.transactions.dto.TransactionResponse;
 import bolsilloApp.api.transactions.dto.UpdateTransactionRequest;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,7 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
 
         var req = new CreateTransactionRequest(
                 new BigDecimal("50.00"), TransactionType.EXPENSE, "ARS test",
-                catId, LocalDate.now(), "ARS");
+                catId, LocalDate.now(), "ARS", null);
 
         var result = mockMvc.perform(post("/api/transactions")
                         .header("Authorization", "Bearer " + token)
@@ -196,11 +197,11 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        List<TransactionResponse> txns = objectMapper.readValue(
-                result.getResponse().getContentAsString(),
-                new TypeReference<List<TransactionResponse>>() {});
-        assertThat(txns).hasSize(1);
-        assertThat(txns.getFirst().amountCents()).isEqualTo(1000L);
+        var listResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), TransactionListResponse.class);
+        assertThat(listResponse.data()).hasSize(1);
+        assertThat(listResponse.total()).isEqualTo(1);
+        assertThat(listResponse.data().getFirst().amountCents()).isEqualTo(1000L);
     }
 
     // T-TRX-09
@@ -228,9 +229,9 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                         .param("categoryId", expenseCat.toString()))
                 .andExpect(status().isOk())
                 .andReturn();
-        List<TransactionResponse> catResults = objectMapper.readValue(
-                byCat.getResponse().getContentAsString(), new TypeReference<>() {});
-        assertThat(catResults).allMatch(t -> t.categoryId().equals(expenseCat));
+        var catListResponse = objectMapper.readValue(
+                byCat.getResponse().getContentAsString(), TransactionListResponse.class);
+        assertThat(catListResponse.data()).allMatch(t -> t.categoryId().equals(expenseCat));
 
         // Filter by type
         var byType = mockMvc.perform(get("/api/transactions")
@@ -238,9 +239,9 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                         .param("type", "INCOME"))
                 .andExpect(status().isOk())
                 .andReturn();
-        List<TransactionResponse> typeResults = objectMapper.readValue(
-                byType.getResponse().getContentAsString(), new TypeReference<>() {});
-        assertThat(typeResults).allMatch(t -> t.type() == TransactionType.INCOME);
+        var typeListResponse = objectMapper.readValue(
+                byType.getResponse().getContentAsString(), TransactionListResponse.class);
+        assertThat(typeListResponse.data()).allMatch(t -> t.type() == TransactionType.INCOME);
     }
 
     // T-TRX-10
@@ -267,10 +268,11 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // Can't easily verify the cap without 201+ records, but the request succeeds
-        List<TransactionResponse> txns = objectMapper.readValue(
-                result.getResponse().getContentAsString(), new TypeReference<>() {});
-        assertThat(txns.size()).isLessThanOrEqualTo(200);
+        // Verify the limit was capped to 200
+        var listResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), TransactionListResponse.class);
+        assertThat(listResponse.data().size()).isLessThanOrEqualTo(200);
+        assertThat(listResponse.limit()).isEqualTo(200);
     }
 
     // T-TRX-12
@@ -292,7 +294,7 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(new UpdateTransactionRequest(
-                                null, null, "Updated desc", null, null, null))))
+                                null, null, "Updated desc", null, null, null, null))))
                 .andExpect(status().isOk())
                 .andReturn();
         var patched = objectMapper.readValue(patchResult.getResponse().getContentAsString(), TransactionResponse.class);
@@ -327,7 +329,7 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(new UpdateTransactionRequest(
-                                new BigDecimal("75.00"), null, null, null, null, null))))
+                                new BigDecimal("75.00"), null, null, null, null, null, null))))
                 .andExpect(status().isOk())
                 .andReturn();
         var patched = objectMapper.readValue(patchResult.getResponse().getContentAsString(), TransactionResponse.class);
@@ -390,8 +392,355 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        List<TransactionResponse> txns = objectMapper.readValue(
-                listResult.getResponse().getContentAsString(), new TypeReference<>() {});
-        assertThat(txns).noneMatch(t -> t.id().equals(resp.id()));
+        var listResponse = objectMapper.readValue(
+                listResult.getResponse().getContentAsString(), TransactionListResponse.class);
+        assertThat(listResponse.data()).noneMatch(t -> t.id().equals(resp.id()));
+    }
+
+    // T-TRX-EX-01 — USD transaction with exchangeRate provided in request uses that value
+    @Test
+    void transaccionUsdConExchangeRateEnRequestUsaEseValor() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+
+        BigDecimal rate = new BigDecimal("1200.50");
+        var req = TestDataFactory.transactionRequestWithCurrency(
+                catId, new BigDecimal("100.00"), TransactionType.EXPENSE,
+                LocalDate.now(), "USD", rate);
+
+        var result = mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        var resp = objectMapper.readValue(result.getResponse().getContentAsString(), TransactionResponse.class);
+
+        // amount_cents = 10000 (100.00 * 100)
+        assertThat(resp.amountCents()).isEqualTo(10000L);
+        // exchange_rate should be the one we sent
+        assertThat(resp.exchangeRate()).isEqualByComparingTo(rate);
+        // amount_ars_cents = round(10000 * 1200.50) = 12005000
+        assertThat(resp.amountArsCents()).isEqualTo(12005000L);
+        assertThat(resp.currency()).isEqualTo("USD");
+    }
+
+    // T-TRX-EX-02 — USD transaction without exchangeRate looks up by transaction date, not today
+    @Test
+    void transaccionUsdSinRateBuscaCotizacionPorFechaDeTransaccion() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+
+        LocalDate date1 = LocalDate.now().minusDays(5);
+        LocalDate date2 = LocalDate.now().minusDays(3);
+
+        // Insert two different exchange rates for two different dates
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1100.000000"), date1, "blue");
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1200.000000"), date2, "blue");
+
+        // Create transaction for date1 (should use rate 1100)
+        var req1 = TestDataFactory.transactionRequestWithCurrency(
+                catId, new BigDecimal("10.00"), TransactionType.EXPENSE, date1, "USD", null);
+        var result1 = mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req1)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var resp1 = objectMapper.readValue(result1.getResponse().getContentAsString(), TransactionResponse.class);
+
+        // Create transaction for date2 (should use rate 1200)
+        var req2 = TestDataFactory.transactionRequestWithCurrency(
+                catId, new BigDecimal("10.00"), TransactionType.EXPENSE, date2, "USD", null);
+        var result2 = mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req2)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var resp2 = objectMapper.readValue(result2.getResponse().getContentAsString(), TransactionResponse.class);
+
+        // amount_cents = 1000 for both
+        assertThat(resp1.amountCents()).isEqualTo(1000L);
+        assertThat(resp2.amountCents()).isEqualTo(1000L);
+
+        // resp1: amount_ars_cents = round(1000 * 1100) = 1100000
+        assertThat(resp1.exchangeRate()).isEqualByComparingTo(new BigDecimal("1100"));
+        assertThat(resp1.amountArsCents()).isEqualTo(1100000L);
+
+        // resp2: amount_ars_cents = round(1000 * 1200) = 1200000
+        assertThat(resp2.exchangeRate()).isEqualByComparingTo(new BigDecimal("1200"));
+        assertThat(resp2.amountArsCents()).isEqualTo(1200000L);
+    }
+
+    // T-TRX-EX-03 — USD transaction without exchangeRate and no rate in DB returns 422
+    @Test
+    void transaccionUsdSinCotizacionDisponibleDevuelve422() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+
+        // No exchange rates inserted for this date
+        var req = TestDataFactory.transactionRequestWithCurrency(
+                catId, new BigDecimal("50.00"), TransactionType.EXPENSE,
+                LocalDate.now().minusDays(10), "USD", null);
+
+        var result = mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req)))
+                .andExpect(status().isUnprocessableEntity())
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+        assertThat(body).contains("MISSING_EXCHANGE_RATE");
+        assertThat(body).contains("exchangeRate");
+    }
+
+    // T-TRX-EX-04 — ARS transaction ignores exchange rate lookup, rate = 1.0 always
+    @Test
+    void transaccionArsIgnoraLookupRateEsUno() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+
+        var req = TestDataFactory.transactionRequestWithCurrency(
+                catId, new BigDecimal("75.00"), TransactionType.EXPENSE,
+                LocalDate.now(), "ARS", null);
+
+        var result = mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        var resp = objectMapper.readValue(result.getResponse().getContentAsString(), TransactionResponse.class);
+        assertThat(resp.exchangeRate()).isEqualByComparingTo(BigDecimal.ONE);
+        assertThat(resp.amountArsCents()).isEqualTo(resp.amountCents());
+        assertThat(resp.amountArsCents()).isEqualTo(7500L);
+    }
+
+    // T-TRX-17 — Pagination: SQL LIMIT, not in-memory
+    @Test
+    void paginacionReal_300Registros_limit50_devuelve50ConTotal300() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+
+        // Bulk-insert 300 transactions directly via JDBC for speed
+        UUID userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM users LIMIT 1", UUID.class);
+        for (int i = 0; i < 300; i++) {
+            jdbcTemplate.update("""
+                INSERT INTO transactions (id, user_id, category_id, type, amount_cents, currency,
+                    amount_ars_cents, exchange_rate, description, transaction_date, source)
+                VALUES (gen_random_uuid(), ?, ?, 'EXPENSE', 1000, 'ARS',
+                    1000, 1.0, ?, ?, 'MANUAL')
+                """,
+                    userId, catId, "Bulk txn " + i,
+                    LocalDate.of(2026, 6, 1).plusDays(i % 28));
+        }
+
+        // Verify count in DB
+        int dbCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND deleted_at IS NULL",
+                Integer.class, userId);
+        assertThat(dbCount).isEqualTo(300);
+
+        // Request with limit=50
+        var result = mockMvc.perform(get("/api/transactions")
+                        .header("Authorization", "Bearer " + token)
+                        .param("limit", "50"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var listResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), TransactionListResponse.class);
+
+        // Exactly 50 rows returned
+        assertThat(listResponse.data()).hasSize(50);
+        // Total reflects all 300 in DB
+        assertThat(listResponse.total()).isEqualTo(300);
+        // Limit echoed back
+        assertThat(listResponse.limit()).isEqualTo(50);
+        assertThat(listResponse.offset()).isEqualTo(0);
+    }
+
+    // T-TRX-PATCH-01 — PATCH amount on USD transaction recalculates amount_ars_cents with correct rate
+    @Test
+    void patchAmountEnUsdRecalculaConRateCorrecto() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+        LocalDate date = LocalDate.now().minusDays(1);
+
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1150.000000"), date, "blue");
+
+        // Create USD transaction with explicit rate
+        var createReq = TestDataFactory.transactionRequestWithCurrency(
+                catId, new BigDecimal("100.00"), TransactionType.EXPENSE, date, "USD", new BigDecimal("1150"));
+        var created = objectMapper.readValue(
+                mockMvc.perform(post("/api/transactions")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(createReq)))
+                        .andExpect(status().isCreated())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        // PATCH amount to 200.00 — no exchangeRate in request, should lookup from DB
+        var patched = objectMapper.readValue(
+                mockMvc.perform(patch("/api/transactions/" + created.id())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(new UpdateTransactionRequest(
+                                        new BigDecimal("200.00"), null, null, null, null, null, null))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(patched.amountCents()).isEqualTo(20000L);
+        assertThat(patched.exchangeRate()).isEqualByComparingTo(new BigDecimal("1150"));
+        // 20000 * 1150 = 23000000
+        assertThat(patched.amountArsCents()).isEqualTo(23000000L);
+    }
+
+    // T-TRX-PATCH-02 — PATCH transactionDate on USD re-resolves rate for the new date
+    @Test
+    void patchFechaEnUsdReResuelveRateParaFechaNueva() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+        LocalDate dateOld = LocalDate.now().minusDays(5);
+        LocalDate dateNew = LocalDate.now().minusDays(3);
+
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1000.000000"), dateOld, "blue");
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1300.000000"), dateNew, "blue");
+
+        // Create USD transaction on dateOld
+        var created = objectMapper.readValue(
+                mockMvc.perform(post("/api/transactions")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(TestDataFactory.transactionRequestWithCurrency(
+                                        catId, new BigDecimal("50.00"), TransactionType.EXPENSE, dateOld, "USD", null))))
+                        .andExpect(status().isCreated())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(created.exchangeRate()).isEqualByComparingTo(new BigDecimal("1000"));
+
+        // PATCH transactionDate to dateNew — rate should change to 1300
+        var patched = objectMapper.readValue(
+                mockMvc.perform(patch("/api/transactions/" + created.id())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(new UpdateTransactionRequest(
+                                        null, null, null, null, dateNew, null, null))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(patched.transactionDate()).isEqualTo(dateNew);
+        assertThat(patched.exchangeRate()).isEqualByComparingTo(new BigDecimal("1300"));
+        // 5000 * 1300 = 6500000
+        assertThat(patched.amountArsCents()).isEqualTo(6500000L);
+    }
+
+    // T-TRX-PATCH-03 — PATCH currency ARS→USD resolves rate; USD→ARS sets rate to 1.0
+    @Test
+    void patchCurrencyResuelveOResetaRate() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+        LocalDate date = LocalDate.now().minusDays(2);
+
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1250.000000"), date, "blue");
+
+        // Create ARS transaction
+        var created = objectMapper.readValue(
+                mockMvc.perform(post("/api/transactions")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(TestDataFactory.transactionRequestWithCurrency(
+                                        catId, new BigDecimal("80.00"), TransactionType.EXPENSE, date, "ARS", null))))
+                        .andExpect(status().isCreated())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(created.exchangeRate()).isEqualByComparingTo(BigDecimal.ONE);
+        assertThat(created.amountArsCents()).isEqualTo(8000L);
+
+        // PATCH currency to USD — should resolve rate from DB
+        var patchedToUsd = objectMapper.readValue(
+                mockMvc.perform(patch("/api/transactions/" + created.id())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(new UpdateTransactionRequest(
+                                        null, null, null, null, null, "USD", null))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(patchedToUsd.currency()).isEqualTo("USD");
+        assertThat(patchedToUsd.exchangeRate()).isEqualByComparingTo(new BigDecimal("1250"));
+        // 8000 * 1250 = 10000000
+        assertThat(patchedToUsd.amountArsCents()).isEqualTo(10000000L);
+
+        // PATCH currency back to ARS — rate resets to 1.0
+        var patchedToArs = objectMapper.readValue(
+                mockMvc.perform(patch("/api/transactions/" + created.id())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(new UpdateTransactionRequest(
+                                        null, null, null, null, null, "ARS", null))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(patchedToArs.currency()).isEqualTo("ARS");
+        assertThat(patchedToArs.exchangeRate()).isEqualByComparingTo(BigDecimal.ONE);
+        assertThat(patchedToArs.amountArsCents()).isEqualTo(8000L);
+    }
+
+    // T-TRX-PATCH-04 — PATCH non-monetary field (description) does NOT touch amount_ars_cents or exchange_rate
+    @Test
+    void patchDescripcionNoTocaRateNiAmountArs() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+        LocalDate date = LocalDate.now().minusDays(1);
+
+        jdbcTemplate.update(
+                "INSERT INTO exchange_rates (from_currency, to_currency, rate, rate_date, source) VALUES (?, ?, ?, ?, ?)",
+                "USD", "ARS", new BigDecimal("1100.000000"), date, "blue");
+
+        // Create USD transaction
+        var created = objectMapper.readValue(
+                mockMvc.perform(post("/api/transactions")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(TestDataFactory.transactionRequestWithCurrency(
+                                        catId, new BigDecimal("25.00"), TransactionType.EXPENSE, date, "USD", null))))
+                        .andExpect(status().isCreated())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        BigDecimal originalRate = created.exchangeRate();
+        Long originalArsCents = created.amountArsCents();
+
+        // PATCH only description
+        var patched = objectMapper.readValue(
+                mockMvc.perform(patch("/api/transactions/" + created.id())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(toJson(new UpdateTransactionRequest(
+                                        null, null, "New description", null, null, null, null))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(), TransactionResponse.class);
+
+        assertThat(patched.description()).isEqualTo("New description");
+        assertThat(patched.exchangeRate()).isEqualByComparingTo(originalRate);
+        assertThat(patched.amountArsCents()).isEqualTo(originalArsCents);
+        assertThat(patched.amountCents()).isEqualTo(created.amountCents());
     }
 }

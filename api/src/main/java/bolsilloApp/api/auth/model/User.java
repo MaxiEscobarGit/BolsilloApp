@@ -38,6 +38,10 @@ public class User implements UserDetails {
     private String defaultCurrency = "ARS";
 
     @Builder.Default
+    @Column(name = "preferred_exchange_source", nullable = false, length = 20)
+    private String preferredExchangeSource = "blue";
+
+    @Builder.Default
     @Column(name = "ai_messages_used", nullable = false)
     private Integer aiMessagesUsed = 0;
 

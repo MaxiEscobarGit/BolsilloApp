@@ -2,6 +2,7 @@ package bolsilloApp.api.transactions;
 
 import bolsilloApp.api.auth.model.User;
 import bolsilloApp.api.transactions.dto.CreateTransactionRequest;
+import bolsilloApp.api.transactions.dto.TransactionListResponse;
 import bolsilloApp.api.transactions.dto.TransactionResponse;
 import bolsilloApp.api.transactions.dto.UpdateTransactionRequest;
 import jakarta.validation.Valid;
@@ -11,7 +12,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,7 +29,7 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransactionResponse>> findAll(
+    public ResponseEntity<TransactionListResponse> findAll(
             @AuthenticationPrincipal User currentUser,
             @RequestParam(required = false) LocalDate from,
             @RequestParam(required = false) LocalDate to,
