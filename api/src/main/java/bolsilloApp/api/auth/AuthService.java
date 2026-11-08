@@ -6,6 +6,7 @@ import bolsilloApp.api.auth.dto.RegisterRequest;
 import bolsilloApp.api.auth.model.RefreshToken;
 import bolsilloApp.api.auth.model.User;
 import bolsilloApp.api.shared.exception.ApiException;
+import bolsilloApp.api.shared.exception.TooManyRequestsException;
 import bolsilloApp.api.shared.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
@@ -27,6 +30,10 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttemptService;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private volatile String dummyPasswordHash;
 
     @Value("${app.jwt.refresh-expiration-ms}")
     private long refreshExpirationMs;
@@ -53,41 +60,55 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
-    public AuthResponse login(LoginRequest request) {
-        var user = authRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ApiException("Invalid credentials", "INVALID_CREDENTIALS", 401));
+    public AuthResponse login(LoginRequest request, String clientIp) {
+        loginAttemptService.blockedForSeconds(request.email(), clientIp).ifPresent(seconds -> {
+            throw new TooManyRequestsException(
+                    "Too many failed login attempts, try again later", "TOO_MANY_LOGIN_ATTEMPTS", seconds);
+        });
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        var user = authRepository.findByEmail(request.email()).orElse(null);
+        // Siempre correr bcrypt (con hash dummy si el usuario no existe) para no filtrar
+        // por timing si el email esta registrado.
+        String hash = user != null ? user.getPasswordHash() : dummyPasswordHash();
+        boolean matches = passwordEncoder.matches(request.password(), hash);
+
+        if (user == null || !matches) {
+            loginAttemptService.recordFailure(request.email(), clientIp);
             throw new ApiException("Invalid credentials", "INVALID_CREDENTIALS", 401);
         }
 
+        loginAttemptService.recordSuccess(request.email(), clientIp);
         return buildAuthResponse(user);
     }
 
     @Transactional(noRollbackFor = ApiException.class)
     public AuthResponse refresh(String rawToken) {
-        String hash = sha256(rawToken);
+        var rt = refreshTokenRepository.findByTokenHash(sha256(rawToken))
+                .orElseThrow(() -> new ApiException("Invalid refresh token", "INVALID_TOKEN", 401));
+        var user = rt.getUser();
 
-        // Check if this token was already revoked (reuse detection)
-        var maybeRevoked = refreshTokenRepository.findByTokenHash(hash);
-        if (maybeRevoked.isPresent() && maybeRevoked.get().isRevoked()) {
-            // Token reuse detected - revoke ALL tokens for this user
-            refreshTokenRepository.revokeAllByUserId(maybeRevoked.get().getUser().getId());
-            throw new ApiException("Token reuse detected, all sessions revoked", "TOKEN_REUSE", 401);
+        if (rt.isRevoked()) {
+            // Reuse detection: un token ya rotado/revocado se volvio a presentar -> revocar TODAS las sesiones
+            revokeAllAndFail(user.getId());
         }
 
-        var rt = refreshTokenRepository.findByTokenHashAndRevokedFalse(hash)
-                .orElseThrow(() -> new ApiException("Invalid refresh token", "INVALID_TOKEN", 401));
-
         if (rt.getExpiresAt().isBefore(LocalDateTime.now())) {
-            rt.setRevoked(true);
+            // No se marca como revocado: reintentar con un token vencido no debe disparar reuse detection
             throw new ApiException("Refresh token expired", "TOKEN_EXPIRED", 401);
         }
 
-        // Rotation: revoke old, issue new
-        rt.setRevoked(true);
+        // Rotacion atomica: si dos requests concurrentes usan el mismo token, solo una gana;
+        // la otra se trata como reuso.
+        if (refreshTokenRepository.revokeIfActive(rt.getId()) == 0) {
+            revokeAllAndFail(user.getId());
+        }
 
-        return buildAuthResponse(rt.getUser());
+        return buildAuthResponse(user);
+    }
+
+    private void revokeAllAndFail(UUID userId) {
+        refreshTokenRepository.revokeAllByUserId(userId);
+        throw new ApiException("Token reuse detected, all sessions revoked", "TOKEN_REUSE", 401);
     }
 
     @Transactional
@@ -99,7 +120,7 @@ public class AuthService {
 
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtService.generateToken(user.getId(), user.getEmail());
-        String rawRefresh = UUID.randomUUID().toString();
+        String rawRefresh = newRefreshToken();
 
         var rt = RefreshToken.builder()
                 .user(user)
@@ -109,6 +130,21 @@ public class AuthService {
         refreshTokenRepository.save(rt);
 
         return new AuthResponse(accessToken, rawRefresh, user.getId(), user.getEmail(), user.getDisplayName());
+    }
+
+    private static String newRefreshToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String dummyPasswordHash() {
+        String hash = dummyPasswordHash;
+        if (hash == null) {
+            hash = passwordEncoder.encode(newRefreshToken());
+            dummyPasswordHash = hash;
+        }
+        return hash;
     }
 
     private String sha256(String input) {
