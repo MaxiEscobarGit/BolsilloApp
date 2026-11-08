@@ -43,6 +43,7 @@ services:
     container_name: finanzas-api
     profiles: ["api"]
     environment:
+      SPRING_PROFILES_ACTIVE: dev
       PORT: 8080
       DATABASE_URL: jdbc:postgresql://postgres:5432/finanzas_dev
       DATABASE_USER: postgres

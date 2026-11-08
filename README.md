@@ -99,5 +99,17 @@ Para correr lo mismo en local: `cd api && mvn -B verify` (necesita Docker corrie
 ## Deploy (Railway)
 
 `railway.json` en la raíz configura el build con `api/Dockerfile` (contexto `api/`) y el
-healthcheck en `/actuator/health`. En Railway hay que definir `DATABASE_URL` (JDBC de Supabase),
-`DATABASE_USER`, `DATABASE_PASSWORD`, `JWT_SECRET` y `ANTHROPIC_API_KEY`. `PORT` lo inyecta Railway.
+healthcheck en `/actuator/health`.
+
+La imagen arranca en perfil **`prod`** por defecto (`SPRING_PROFILES_ACTIVE=prod` en el
+Dockerfile), que no tiene valores por defecto: si falta alguna variable, la app no arranca.
+Variables obligatorias en Railway:
+
+- `DATABASE_URL` (JDBC de Supabase)
+- `DATABASE_USER`
+- `DATABASE_PASSWORD`
+- `JWT_SECRET`
+- `ANTHROPIC_API_KEY`
+- `CORS_ALLOWED_ORIGINS` (orígenes web permitidos, separados por coma)
+
+`PORT` lo inyecta Railway. El `docker compose` local fuerza `SPRING_PROFILES_ACTIVE=dev`.

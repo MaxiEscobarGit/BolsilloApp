@@ -21,7 +21,9 @@ COPY --from=build --chown=app:app /workspace/app.jar app.jar
 USER app
 
 # Railway inyecta PORT; la app lo lee vía server.port=${PORT:8080}
+# La imagen arranca en perfil prod (sin defaults): faltan variables => no arranca
 ENV PORT=8080 \
+    SPRING_PROFILES_ACTIVE=prod \
     JAVA_OPTS="-XX:MaxRAMPercentage=75 -Duser.timezone=UTC"
 EXPOSE 8080
 
