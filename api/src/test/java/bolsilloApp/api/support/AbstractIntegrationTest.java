@@ -41,6 +41,9 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        // Exchange rates: nunca llamar a la API real en tests (ni al arrancar ni por cron)
+        registry.add("exchange-rates.load-on-startup", () -> "false");
+        registry.add("exchange-rates.cron", () -> "-");
     }
 
     @Autowired
