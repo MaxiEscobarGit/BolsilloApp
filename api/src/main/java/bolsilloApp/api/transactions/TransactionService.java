@@ -35,6 +35,15 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse create(UUID userId, CreateTransactionRequest request) {
+        return create(userId, request, TransactionSource.MANUAL);
+    }
+
+    /**
+     * Same as {@link #create(UUID, CreateTransactionRequest)} but lets internal callers
+     * (e.g. the chat assistant) set the origin of the transaction.
+     */
+    @Transactional
+    public TransactionResponse create(UUID userId, CreateTransactionRequest request, TransactionSource source) {
         validateTransactionDate(request.transactionDate());
         validateCategory(userId, request.categoryId());
 
@@ -63,7 +72,7 @@ public class TransactionService {
                 .exchangeRate(exchangeRate)
                 .description(request.description())
                 .transactionDate(request.transactionDate())
-                .source(TransactionSource.MANUAL)
+                .source(source)
                 .build();
 
         return toResponse(transactionRepository.save(transaction));
