@@ -21,8 +21,28 @@ public class JwtService {
     public JwtService(
             @Value("${app.jwt.secret}") String jwtSecret,
             @Value("${app.jwt.expiration-ms}") long expirationMs) {
-        this.key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecret));
+        this.key = Keys.hmacShaKeyFor(decodeAndValidate(jwtSecret));
         this.expirationMs = expirationMs;
+    }
+
+    static final int MIN_SECRET_BITS = 256;
+
+    // Falla el arranque si el secret falta, no es Base64 o tiene menos de 256 bits (HS256).
+    static byte[] decodeAndValidate(String jwtSecret) {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET no esta configurado");
+        }
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(jwtSecret.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT_SECRET debe estar en Base64 (generalo con: openssl rand -base64 32)");
+        }
+        if (bytes.length * 8 < MIN_SECRET_BITS) {
+            throw new IllegalStateException("JWT_SECRET debe tener al menos " + MIN_SECRET_BITS
+                    + " bits; tiene " + (bytes.length * 8));
+        }
+        return bytes;
     }
 
     public String generateToken(UUID userId, String email) {
