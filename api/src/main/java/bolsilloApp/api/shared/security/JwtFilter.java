@@ -4,11 +4,13 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -38,8 +40,10 @@ public class JwtFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     }
                 }
-            } catch (Exception ignored) {
-                // ponytail: invalid/expired token — just don't authenticate, let Spring Security handle 401
+            } catch (JwtException | IllegalArgumentException | UsernameNotFoundException ignored) {
+                // Token invalido/expirado o usuario inexistente: no autenticar, Spring Security responde 401.
+                // Otros errores (ej. DB caida) se propagan en vez de disfrazarse de 401.
+                SecurityContextHolder.clearContext();
             }
         }
         filterChain.doFilter(request, response);
