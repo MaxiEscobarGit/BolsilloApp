@@ -48,3 +48,56 @@ Para conectar pgAdmin al contenedor de Postgres:
 cd api
 ./mvnw spring-boot:run
 ```
+
+### Swagger / OpenAPI
+
+Con la API corriendo:
+
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- Spec JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+
+Para probar endpoints protegidos: hacé `POST /api/auth/login`, copiá el `accessToken`
+y pegalo en el botón **Authorize** (esquema Bearer JWT, sin el prefijo `Bearer`).
+
+Healthcheck público: `GET /actuator/health` (es el único endpoint de actuator expuesto).
+
+## Docker
+
+La imagen se buildea desde `api/` (multi-stage: Maven + JDK 21 → JRE 21 Alpine, usuario no root).
+
+```bash
+docker build -t bolsillo-api ./api
+docker run --rm -p 8080:8080 \
+  -e DATABASE_URL=jdbc:postgresql://host.docker.internal:5432/finanzas_dev \
+  -e DATABASE_USER=postgres -e DATABASE_PASSWORD=... \
+  -e JWT_SECRET=... -e ANTHROPIC_API_KEY=... \
+  bolsillo-api
+```
+
+El puerto se toma de la variable `PORT` (default `8080`); JVM tuneable con `JAVA_OPTS`.
+
+### Todo junto con docker compose
+
+El servicio `api` está bajo el perfil opcional `api`, así que `docker compose up -d` sigue
+levantando solo la DB y pgAdmin. Para levantar también la API:
+
+```bash
+docker compose --profile api up -d --build
+```
+
+`JWT_SECRET` y `ANTHROPIC_API_KEY` se leen del `.env` de la raíz (si están vacíos usa defaults de desarrollo).
+
+## CI
+
+`.github/workflows/ci.yml` corre en cada push a `main` y en cada PR:
+
+- `mvn -B verify` en `api/` con Temurin 21 y cache de Maven (los tests usan Testcontainers, Docker ya viene en los runners de GitHub).
+- Build de la imagen Docker (sin push) para detectar roturas del `Dockerfile`.
+
+Para correr lo mismo en local: `cd api && mvn -B verify` (necesita Docker corriendo).
+
+## Deploy (Railway)
+
+`railway.json` en la raíz configura el build con `api/Dockerfile` (contexto `api/`) y el
+healthcheck en `/actuator/health`. En Railway hay que definir `DATABASE_URL` (JDBC de Supabase),
+`DATABASE_USER`, `DATABASE_PASSWORD`, `JWT_SECRET` y `ANTHROPIC_API_KEY`. `PORT` lo inyecta Railway.
