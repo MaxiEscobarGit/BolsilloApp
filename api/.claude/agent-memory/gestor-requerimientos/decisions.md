@@ -50,4 +50,4 @@
 ## D9: AI message quota
 - Decision: `ChatService` increments `users.ai_messages_used` per message, cap `MAX_AI_MESSAGES_PER_MONTH = 100`
 - Reset when `ai_messages_reset_at + 1 month` has passed; over the cap -> 429 `RATE_LIMITED`
-- Pending: CORRECT intent is detected but not yet processed (no update of transaction + user_aliases)
+- CORRECT updates the last CHAT transaction (or ChatRequest.transactionId) via TransactionService and upserts user_aliases

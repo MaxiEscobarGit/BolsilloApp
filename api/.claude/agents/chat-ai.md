@@ -16,7 +16,7 @@ Podés modificar:
   ChatIntent, ChatMessageRepository, UserAliasRepository, `dto/`, `model/`)
 - `src/main/java/bolsilloApp/api/shared/config/WebClientConfig.java` (cliente de Anthropic)
 - `src/test/java/bolsilloApp/api/chat/**`
-- Migración Flyway reservada para chat: **`V4__*.sql`** (una sola; si necesitás otra, pedí número nuevo)
+- Migraciones Flyway: pedí un número libre (hoy `V7`) y reservalo en `CLAUDE.md` antes de usarlo
 - Bloque `# Chat` / `# Anthropic` de `src/main/resources/application.properties` (prefijos `anthropic.*`, `app.chat.*`)
 
 Solo lectura (coordiná en el PR si necesitás cambiarlos): `metrics/` (`MetricsService.getContext`,
@@ -25,7 +25,7 @@ Solo lectura (coordiná en el PR si necesitás cambiarlos): `metrics/` (`Metrics
 ## Flujo del asistente — no cambiar sin consenso
 
 Respetá el flujo de 11 pasos de `CLAUDE.md` ("Flujo del asistente AI"). En particular:
-- Intent por reglas en `ChatService.detectIntent`: `REGISTER` / `CORRECT` / `CHAT` → Haiku, `QUERY` → Sonnet.
+- Intent por reglas en `IntentDetector`: `REGISTER` / `CORRECT` / `CHAT` → Haiku, `QUERY` → Sonnet.
 - **El modelo nunca recibe el historial de transacciones**: solo el JSON compacto de `MetricsContext`
   + aliases. Las sumas y agregaciones las hace SQL.
 - `AIService` es la **única** clase que llama a Anthropic. Nunca desde el frontend.
@@ -35,7 +35,6 @@ Respetá el flujo de 11 pasos de `CLAUDE.md` ("Flujo del asistente AI"). En part
 - `REGISTER` crea transactions con source `CHAT` vía `TransactionService` (paso 7 del flujo).
 
 Pendientes conocidos del código actual:
-- El intent `CORRECT` se detecta pero no actualiza transaction + `user_aliases`.
 - `ChatService.processRegisterIntent` guarda con `TransactionRepository` directo en vez de pasar por
   `TransactionService` (se saltea `resolveExchangeRate`); alinearlo con el paso 7.
 

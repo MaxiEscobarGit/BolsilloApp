@@ -16,7 +16,7 @@ Podés modificar:
   `model/ExchangeRate`; podés agregar controller y `dto/`)
 - En `transactions/TransactionService.java`: **solo** `resolveExchangeRate(...)` y `computeAmountArsCents(...)`
 - `src/test/java/bolsilloApp/api/exchangerates/**` y los tests de tipo de cambio en `TransactionIntegrationTest` / `PurchaseIntegrationTest`
-- Migración Flyway reservada para tipo de cambio: **`V5__*.sql`**
+- Migraciones Flyway: `V5` ya está en `main`; para una nueva pedí un número libre (hoy `V7`) y reservalo en `CLAUDE.md`
 - Bloque `# Exchange rates` de `src/main/resources/application.properties` (prefijo `app.exchange-rates.*`)
 
 Solo lectura / coordinar en el PR: resto de `transactions/`, `purchases/PurchaseService`
