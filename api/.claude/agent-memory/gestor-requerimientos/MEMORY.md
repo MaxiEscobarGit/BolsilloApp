@@ -2,9 +2,8 @@
 
 ## Project State (last updated: 2026-11-08)
 - **MVP modules implemented**: Auth, Categories, Transactions, Purchases, Debts, Metrics, Chat/AI, ExchangeRates
-  (Chat: CORRECT intent detected but not processed yet)
 - **Flyway migrations in main**: V1 (schema + seeds), V2 (fix enum case to UPPERCASE), V3 (preferred_exchange_source on users)
-- **Reserved**: V4 chat, V5 exchange rates, V6 security — next free V7
+- **Migrations**: V5 (exchange rates index) merged; V4 and V6 were reserved but skipped (never reuse) — next free V7
 - **81 tests pass** on Spring Boot 4.1.0 + Java 21
 - **BUG-001 fixed**: AuthenticationEntryPoint returning 401 JSON
 - **PERF-001 fixed**: TransactionService.findAll() uses JPA Specifications + SQL pagination

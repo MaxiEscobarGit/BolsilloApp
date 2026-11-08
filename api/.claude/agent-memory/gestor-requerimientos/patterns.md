@@ -37,6 +37,6 @@
 
 ## Flyway
 - In `main`: V1__crear_tablas_base.sql, V2__fix_enum_case_constraints.sql, V3__add_preferred_exchange_source_to_users.sql
-- Reserved for parallel agents: V4 chat, V5 exchange rates, V6 security
+- V5 merged (exchange rates lookup index); V4/V6 skipped, never reuse them. Next free: V7
 - Next free number: V7 — reserve it in CLAUDE.md ("Trabajo en paralelo con varios agentes") before using it
 - Never edit or renumber a migration already merged

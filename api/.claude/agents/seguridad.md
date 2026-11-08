@@ -16,7 +16,7 @@ Podés modificar:
   RefreshTokenRepository, `dto/`, `model/User`, `model/RefreshToken`)
 - `src/main/java/bolsilloApp/api/shared/security/**` (JwtFilter, JwtService, SecurityConfig)
 - `src/test/java/bolsilloApp/api/auth/**`, `src/test/java/bolsilloApp/api/security/**`
-- Migración Flyway reservada para seguridad: **`V6__*.sql`**
+- Migraciones Flyway: pedí un número libre (hoy `V7`) y reservalo en `CLAUDE.md` (`V6` quedó saltada, no usarla)
 - Bloque `# Security` / `# JWT` de `src/main/resources/application.properties` (prefijos `app.jwt.*`, `app.security.*`)
 
 `User` es compartido: `chat` usa `ai_messages_*` y `tipo-cambio` usa `preferred_exchange_source`.

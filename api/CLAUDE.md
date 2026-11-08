@@ -80,8 +80,13 @@ bolsilloApp.api/
 │   ├── dto/     (CreateDebtRequest, DebtResponse)
 │   └── model/   (Debt)
 ├── exchangerates/
-│   ├── ExchangeRateService       ← getRate(from, to, date, source)
+│   ├── ExchangeRateController    ← GET /api/exchange-rates/latest, GET /api/exchange-rates
+│   ├── ExchangeRateService       ← getRate (con fallback a fecha anterior), refreshFromApi
+│   ├── ExchangeRateSyncJob       ← @Scheduled + carga al arrancar
 │   ├── ExchangeRateRepository
+│   ├── client/  (DolarApiClient, FetchedRate)  ← dolarapi.com
+│   ├── config/  (ExchangeRatesConfig, ExchangeRateProperties)
+│   ├── dto/     (ExchangeRateResponse)
 │   └── model/   (ExchangeRate)
 ├── metrics/
 │   ├── MetricsController
@@ -89,19 +94,22 @@ bolsilloApp.api/
 │   └── dto/     (SummaryResponse, MetricsContext)
 ├── chat/
 │   ├── ChatController
-│   ├── ChatService               ← orquesta el flujo del asistente + detectIntent()
+│   ├── ChatService               ← orquesta el flujo (IA fuera de transacción, persistencia corta)
+│   ├── IntentDetector            ← detección de intent por reglas
+│   ├── ChatQuotaRepository       ← reset y consumo atómico de ai_messages_used
 │   ├── AIService                 ← única clase que llama a Anthropic
 │   ├── ContextBuilder            ← arma el contexto compacto para el AI
 │   ├── ChatIntent                (enum: REGISTER, QUERY, CORRECT, CHAT)
 │   ├── ChatMessageRepository
 │   ├── UserAliasRepository
-│   ├── dto/     (ChatRequest, ChatResponse, ChatHistoryResponse, AiParsedResponse)
+│   ├── dto/     (ChatRequest, ChatResponse, ChatHistoryResponse, AiParsedResponse, AiPromptContext)
 │   └── model/   (ChatMessage, UserAlias)
 └── shared/
-    ├── security/   (JwtFilter, JwtService, SecurityConfig)
+    ├── security/   (JwtFilter, JwtService, SecurityConfig, ProdSecretsValidator)
     ├── exception/  (GlobalExceptionHandler, ApiException, BusinessRuleException,
-    │                ConflictException, ResourceNotFoundException, UnauthorizedException)
-    └── config/     (WebClientConfig)
+    │                ConflictException, ResourceNotFoundException, UnauthorizedException,
+    │                TooManyRequestsException)
+    └── config/     (WebClientConfig, OpenApiConfig)
 ```
 
 Tests en `src/test/java/bolsilloApp/api/`: un `*IntegrationTest` por módulo,
@@ -285,12 +293,11 @@ consenso** — afecta costos de API y precisión.
 Solo recibe el JSON compacto de `MetricsContext` (totales, por categoría, cuotas
 próximas, aliases). Las sumas y agregaciones las hace SQL, no el AI.
 
-> Estado actual del código (a revisar por el agente de chat): la detección de intent
-> es por reglas (`ChatService.detectIntent`); los IDs de modelo están hardcodeados en
-> `AIService`; el contador `ai_messages_used` se incrementa por mensaje con tope de
-> 100/mes (`MAX_AI_MESSAGES_PER_MONTH`, 429 `RATE_LIMITED` al superarlo); el paso 8
-> (`CORRECT`: actualizar transaction + `user_aliases`) todavía no está implementado; y el
-> paso 7 hoy guarda con `TransactionRepository` directo en vez de `TransactionService`.
+> Estado actual del código: la detección de intent es por reglas (`IntentDetector`); los
+> modelos se configuran con `anthropic.model.fast` / `anthropic.model.smart`; la cuota
+> (`ChatQuotaRepository`) se consume con un `UPDATE` atómico, con tope de 100/mes y 429
+> `RATE_LIMITED`; REGISTER y CORRECT pasan por `TransactionService`; CORRECT hace upsert en
+> `user_aliases`. La llamada a Anthropic se hace **fuera** de cualquier transacción de BD.
 
 ---
 
@@ -304,9 +311,10 @@ Nomenclatura: `V{n}__{descripcion_snake_case}.sql`. Nunca editar una migración 
 | V1      | `V1__crear_tablas_base.sql` (esquema + seeds)   | en `main`             |
 | V2      | `V2__fix_enum_case_constraints.sql`             | en `main`             |
 | V3      | `V3__add_preferred_exchange_source_to_users.sql`| en `main`             |
-| V4      | — chat                                          | reservada             |
-| V5      | — tipo de cambio                                | reservada             |
-| V6      | — seguridad                                     | reservada             |
+| V4      | — (estaba reservada para chat, no se usó)       | saltada, no reutilizar |
+| V5      | `V5__add_exchange_rates_lookup_index.sql`       | en `main`             |
+| V6      | — (estaba reservada para seguridad, no se usó)  | saltada, no reutilizar |
+| V7      | —                                               | **próxima libre**     |
 
 ### Tablas MVP
 
@@ -335,12 +343,16 @@ DATABASE_USER         postgres
 DATABASE_PASSWORD     ...
 JWT_SECRET            string aleatorio de mínimo 256 bits (openssl rand -base64 32)
 ANTHROPIC_API_KEY     sk-ant-...
+SPRING_PROFILES_ACTIVE prod en Railway (la imagen Docker ya lo trae); dev por defecto en local
+CORS_ALLOWED_ORIGINS  orígenes web permitidos, separados por coma
 ```
 
 - En desarrollo: archivo `api/.env` (ignorado por git, lo carga `spring-dotenv`).
   Plantilla en `api/.env.example`. La DB local se levanta con `docker compose up -d` desde la raíz.
 - En producción: variables de entorno en Railway.
-- `application.properties` tiene defaults solo aptos para desarrollo; nunca usarlos en prod.
+- `application.properties` no tiene defaults de secretos. Los defaults locales viven en
+  `application-dev.properties` (perfil por defecto). `application-prod.properties` no tiene
+  defaults: si falta una variable, la app no arranca.
 
 ---
 
@@ -387,9 +399,9 @@ Cuando varios agentes (o personas) trabajan a la vez sobre el backend:
    coordinarlo en el PR.
 2. **Numeración de migraciones Flyway reservada antes de empezar.** Dos ramas con la
    misma `V{n}` rompen Flyway al mergear. Estado actual:
-   - `V4` → chat
-   - `V5` → tipo de cambio
-   - `V6` → seguridad
+   - `V4` y `V6` → reservadas y no usadas; no reutilizarlas, porque Flyway rechaza
+     una versión menor que una ya aplicada
+   - `V5` → tipo de cambio (en `main`)
    - siguiente libre: `V7` (reservarla acá antes de usarla)
    Si un agente necesita más de una migración, reserva un número nuevo; nunca reutiliza
    ni renumera una ya mergeada.
@@ -431,7 +443,10 @@ Cuando varios agentes (o personas) trabajan a la vez sobre el backend:
 - [x] Purchases — crear compra en cuotas (genera N transactions)
 - [x] Debts — CRUD + marcar como pagada
 - [x] Metrics — summary por período, context para el AI
-- [ ] Chat — integración Anthropic con el flujo descrito arriba (falta procesar el intent `CORRECT`)
+- [x] Chat — integración Anthropic con el flujo descrito arriba
+- [x] Tipo de cambio — carga automática desde dolarapi + fallback a fecha anterior
+- [x] Seguridad — perfiles dev/prod, CORS, límite de intentos de login
+- [x] Infra — Dockerfile, Railway, CI (GitHub Actions), OpenAPI/Swagger, actuator
 
 ### V2 (no tocar ahora)
 
