@@ -2,6 +2,16 @@
 
 (Más nuevo arriba)
 
+## 2026-11-08 02:10 UTC — Integración completa
+- Maxi pidió que el orquestador hiciera todo. Se borró el recordatorio pendiente del orquestador archivado.
+- CI de GitHub Actions: todas las corridas terminan en `startup_failure` (el YAML es válido; problema de configuración o facturación de la cuenta). Se levantó Docker en la sesión y se corrió la suite completa localmente antes de cada merge.
+- Merge #1 (docs) y #3 (infra).
+- #4 seguridad: se integró `main` y se resolvió el conflicto en `application.properties` → 115 tests ✅ → merge.
+- #2 tipo de cambio: se integró `main` → **130 tests, 105 con fallo**. Causa: `DolarApiClient` tiene dos constructores sin `@Autowired`, así que el contexto de Spring no arrancaba (bug real, el agente no había corrido la integración). Fix commiteado en la rama → 130 ✅ → merge.
+- #5 chat: se integró `main` → 159 ✅ → merge.
+- #6: CLAUDE.md, memoria y subagentes alineados con lo mergeado → merge.
+- Se archivaron las 5 sesiones de agentes.
+
 ## 2026-11-08 01:42 UTC — Infra aplicó el ajuste
 - Commit b2cab84 en claude/agente-infra: `ENV SPRING_PROFILES_ACTIVE=prod` en el Dockerfile, `dev` en el compose y README actualizado. Verificado.
 - Nota: no deployar la imagen hasta mergear #4, porque sin `application-prod.properties` el perfil prod usaría los defaults de `application.properties`.
