@@ -1,5 +1,6 @@
 package bolsilloApp.api.support;
 
+import bolsilloApp.api.auth.LoginAttemptService;
 import bolsilloApp.api.auth.dto.AuthResponse;
 import bolsilloApp.api.auth.dto.RegisterRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -23,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -49,8 +52,17 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    protected LoginAttemptService loginAttemptService;
+
+    /** Para tests que necesitan levantar la app con otra configuracion contra la misma DB. */
+    public static PostgreSQLContainer<?> postgres() {
+        return postgres;
+    }
+
     @BeforeEach
     void cleanDatabase() {
+        loginAttemptService.reset();
         jdbcTemplate.execute("DELETE FROM user_aliases");
         jdbcTemplate.execute("DELETE FROM chat_messages");
         jdbcTemplate.execute("DELETE FROM transactions");

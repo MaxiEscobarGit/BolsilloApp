@@ -1,9 +1,14 @@
 package bolsilloApp.api.shared.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -20,6 +25,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex) {
         return ResponseEntity.status(ex.getStatus()).body(errorBody(ex.getMessage(), ex.getCode(), ex.getStatus()));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<Map<String, Object>> handleTooManyRequests(TooManyRequestsException ex) {
+        return ResponseEntity.status(429)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(errorBody(ex.getMessage(), ex.getCode(), 429));
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingHeader(MissingRequestHeaderException ex) {
+        return ResponseEntity.badRequest().body(
+                errorBody("Missing required header '" + ex.getHeaderName() + "'", "MISSING_HEADER", 400));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -49,6 +67,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+        // Excepciones de Spring MVC con status propio (404 sin handler, 405, 415, ...): respetar el status
+        // en vez de devolver 500, sin exponer el mensaje interno.
+        if (ex instanceof ErrorResponse errorResponse && errorResponse.getStatusCode().is4xxClientError()) {
+            HttpStatusCode statusCode = errorResponse.getStatusCode();
+            HttpStatus status = HttpStatus.resolve(statusCode.value());
+            String reason = status != null ? status.getReasonPhrase() : "Client error";
+            String code = status != null ? status.name() : "CLIENT_ERROR";
+            return ResponseEntity.status(statusCode).body(errorBody(reason, code, statusCode.value()));
+        }
         log.error("Unhandled exception", ex);
         return ResponseEntity.internalServerError().body(
                 errorBody("Internal server error", "INTERNAL_ERROR", 500));
