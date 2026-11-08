@@ -6,8 +6,15 @@
 - Alternative rejected: JPA AttributeConverter (adds complexity)
 
 ## D2: Exchange rate handling
-- Decision: MVP stores rate=1.0 for all currencies, amount_ars_cents = amount_cents
-- TODO for post-MVP: look up exchange_rates table when currency != ARS
+- Decision: `TransactionService.resolveExchangeRate(currency, requestRate, date, userId)` resolves the rate:
+  1. currency == "ARS" -> 1
+  2. request provides `exchangeRate` -> use it
+  3. otherwise lookup in `exchange_rates` (currency -> ARS, transaction date, `users.preferred_exchange_source`, default "blue")
+  4. no rate found -> ApiException 422 `MISSING_EXCHANGE_RATE`
+- `amount_ars_cents = round(amount_cents * rate, HALF_UP)` via `computeAmountArsCents`
+- PurchaseService delegates to the same method; PATCH recalculates when currency/rate changes
+- History in `exchange_rates` is never recalculated
+- (Superseded: the original MVP rule "rate=1.0 for every currency")
 
 ## D3: Category deletion with existing transactions
 - Decision: Reassign transactions to system "Otros" category of same type, then delete
@@ -18,7 +25,7 @@
 - This is a security measure against token theft
 
 ## D5: AI intent detection
-- Decision: Rule-based detection in ChatService (regex/keyword patterns)
+- Decision: Rule-based detection in `ChatService.detectIntent` (regex/keyword patterns)
 - Not AI-based: saves API calls and latency
 - Patterns: numbers+money words -> REGISTER, question marks -> QUERY, correction phrases -> CORRECT
 
@@ -39,3 +46,8 @@
 - Pagination via PageRequest (SQL LIMIT/OFFSET), COUNT via Page.getTotalElements()
 - Response changed from List<TransactionResponse> to TransactionListResponse (data, total, limit, offset)
 - TransactionSpecification utility class composes predicates conditionally
+
+## D9: AI message quota
+- Decision: `ChatService` increments `users.ai_messages_used` per message, cap `MAX_AI_MESSAGES_PER_MONTH = 100`
+- Reset when `ai_messages_reset_at + 1 month` has passed; over the cap -> 429 `RATE_LIMITED`
+- Pending: CORRECT intent is detected but not yet processed (no update of transaction + user_aliases)
