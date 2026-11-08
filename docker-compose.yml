@@ -37,6 +37,27 @@ services:
     networks:
       - finanzas-net
 
+  # API opcional: docker compose --profile api up -d --build
+  api:
+    build: ./api
+    container_name: finanzas-api
+    profiles: ["api"]
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      PORT: 8080
+      DATABASE_URL: jdbc:postgresql://postgres:5432/finanzas_dev
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-hH4d9Xa3M5mskNX0MCXF1+OkKUFPg3nllFdSydPyXv0=}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-ant-placeholder}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finanzas-net
+
 volumes:
   postgres_data:
   pgadmin_data:
