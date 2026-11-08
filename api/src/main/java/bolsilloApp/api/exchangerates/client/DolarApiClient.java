@@ -3,6 +3,7 @@ package bolsilloApp.api.exchangerates.client;
 import bolsilloApp.api.exchangerates.config.ExchangeRateProperties;
 import bolsilloApp.api.exchangerates.config.ExchangeRatesConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -40,6 +41,7 @@ public class DolarApiClient {
     private final ExchangeRateProperties properties;
     private final Clock clock;
 
+    @Autowired
     public DolarApiClient(@Qualifier(ExchangeRatesConfig.WEB_CLIENT) WebClient webClient,
                           ObjectMapper objectMapper,
                           ExchangeRateProperties properties) {
