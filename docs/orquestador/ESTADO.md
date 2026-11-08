@@ -1,10 +1,10 @@
 # Estado del orquestador — BolsilloApp
 
-**Última actualización:** 2026-11-08 01:40 UTC
+**Última actualización:** 2026-11-08 01:42 UTC
 
 **Resumen:**
 1. Los 5 agentes terminaron y abrieron PR. Revisión hecha: no hay bugs bloqueantes y el merge de prueba de las 5 ramas compila.
-2. Ajuste pedido a infra (#3): que la imagen Docker arranque con `SPRING_PROFILES_ACTIVE=prod`. Sin eso, si en Railway falta la variable, la app usa el JWT secret de dev.
+2. Infra (#3) ya subió el ajuste (commit b2cab84): la imagen arranca con `SPRING_PROFILES_ACTIVE=prod`. No deployar a Railway hasta que también esté mergeado #4, que trae `application-prod.properties`.
 3. Pendiente de Maxi: mergear los PRs en el orden de abajo.
 
 ## Agentes
@@ -12,7 +12,7 @@
 | Agente | session_id | Rama | Tarea | Estado | PR | Tests | Próximos pasos |
 |---|---|---|---|---|---|---|---|
 | Docs | session_01BV8vsLdSQ5Emq8KFffys3s | claude/agente-docs | REQ-005 | esperando revisión | [#1](https://github.com/MaxiEscobarGit/BolsilloApp/pull/1) | n/a (solo docs) | Mergear. Al final, actualizar las notas de "estado actual" del chat |
-| Infra | session_01BV8vsLeHzdyrbqfhTZojsA | claude/agente-infra | REQ-004 | ajuste pedido | [#3](https://github.com/MaxiEscobarGit/BolsilloApp/pull/3) | 85 ✅ + docker build ✅ | Agregar `SPRING_PROFILES_ACTIVE=prod` a la imagen y luego mergear |
+| Infra | session_01BV8vsLeHzdyrbqfhTZojsA | claude/agente-infra | REQ-004 | listo | [#3](https://github.com/MaxiEscobarGit/BolsilloApp/pull/3) | 85 ✅ + docker build ✅ | Mergear (no deployar antes de #4) |
 | Seguridad | session_01BV8vsLhbBVooffm4nh7J6t | claude/agente-seguridad | REQ-002 | esperando revisión | [#4](https://github.com/MaxiEscobarGit/BolsilloApp/pull/4) | 115 ✅ | Rebase sobre main después de infra (conflicto en `application.properties`) |
 | Tipo de cambio | session_01BV8vsM89o2BeEhCkWN4DBL | claude/agente-tipo-cambio | REQ-003 | esperando revisión | [#2](https://github.com/MaxiEscobarGit/BolsilloApp/pull/2) | unit ✅, integración sin correr (no tenía Docker) | Rebase y que el CI corra la integración |
 | Chat | session_01BV8vsKoKwRKX1NpUZerqzT | claude/agente-chat | REQ-001 | esperando revisión | [#5](https://github.com/MaxiEscobarGit/BolsilloApp/pull/5) | 114 ✅ | Rebase al final |

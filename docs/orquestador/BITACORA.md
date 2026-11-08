@@ -2,6 +2,10 @@
 
 (Más nuevo arriba)
 
+## 2026-11-08 01:42 UTC — Infra aplicó el ajuste
+- Commit b2cab84 en claude/agente-infra: `ENV SPRING_PROFILES_ACTIVE=prod` en el Dockerfile, `dev` en el compose y README actualizado. Verificado.
+- Nota: no deployar la imagen hasta mergear #4, porque sin `application-prod.properties` el perfil prod usaría los defaults de `application.properties`.
+
 ## 2026-11-08 01:40 UTC — Revisión de PRs (la coordinación pasa a la sesión principal)
 - La sesión "Orquestador BolsilloApp" quedó archivada; desde ahora coordina la sesión principal de Maxi.
 - Los 5 agentes terminaron y abrieron PR: #1 docs, #2 tipo de cambio, #3 infra, #4 seguridad, #5 chat.
