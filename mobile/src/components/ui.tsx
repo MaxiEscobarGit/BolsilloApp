@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import {
-  Platform,
   Pressable,
   Text as RNText,
   TextInput,
@@ -34,8 +33,7 @@ export function Screen({ children, style }: { children: ReactNode; style?: Style
           backgroundImage: 'radial-gradient(ellipse at top, rgba(0, 255, 133, 0.18), transparent 70%)',
         }}
       />
-      {/* Web only: expo-router draws native tabs as a fixed pill at the top, keep content clear of it. */}
-      <SafeAreaView edges={['top']} style={[{ flex: 1, paddingHorizontal: space.lg, paddingTop: Platform.OS === 'web' ? 64 : 0 }, style]}>
+      <SafeAreaView edges={['top']} style={[{ flex: 1, paddingHorizontal: space.lg }, style]}>
         {children}
       </SafeAreaView>
     </View>
