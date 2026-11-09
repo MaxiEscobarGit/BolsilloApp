@@ -19,8 +19,9 @@ la versión web (Expo web) sirve para previsualizar. El backend es `../api` (Spr
 | Qué | Con qué |
 |---|---|
 | Framework | Expo SDK 58 · React Native 0.88 · React 19 · TypeScript estricto |
-| Navegación | Expo Router (`src/app/`), `Stack.Protected` para auth, `NativeTabs` para pestañas |
+| Navegación | Expo Router (`src/app/`), `Stack.Protected` para auth, barra inferior propia con `expo-router/ui` (botón central = Asistente) |
 | Animación / gestos | Reanimated 4 (+ worklets) · Gesture Handler · expo-haptics |
+| Íconos | `expo-symbols` (`SymbolView`): SF Symbols en iOS, Material Symbols en Android y web |
 | Sesión | refresh token en `expo-secure-store`, access token en memoria (`src/lib/api.ts`) |
 | Tipografía | Geist + Geist Mono (`@expo-google-fonts`) |
 | Estilos | `StyleSheet`/estilos inline con los tokens de `src/theme.ts`. Sin librería de UI |
@@ -36,7 +37,7 @@ src/
 ├── app/                 rutas (Expo Router)
 │   ├── _layout.tsx      fuentes, sesión, Stack con guards (login/register vs (app))
 │   ├── login.tsx · register.tsx
-│   └── (app)/           pestañas: index (Inicio) · movimientos · asistente · deudas
+│   └── (app)/           barra inferior: index (Inicio) · movimientos · asistente (botón central) · deudas · perfil
 ├── components/ui.tsx    Text, Screen, Card, Button, Field
 ├── lib/
 │   ├── api.ts           fetch + refresh rotativo (un solo refresh en vuelo)

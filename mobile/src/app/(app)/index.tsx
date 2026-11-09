@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 
-import { Button, Card, Screen, Text } from '@/components/ui';
+import { Card, Screen, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { formatCents } from '@/lib/money';
@@ -17,7 +17,7 @@ type Summary = {
 };
 
 export default function Inicio() {
-  const { user, logout } = useSession();
+  const { user } = useSession();
   const [summary, setSummary] = useState<Summary>();
   const [error, setError] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
@@ -86,8 +86,6 @@ export default function Inicio() {
             ))
           )}
         </Card>
-
-        <Button title="Cerrar sesión" kind="ghost" onPress={logout} />
       </ScrollView>
     </Screen>
   );
