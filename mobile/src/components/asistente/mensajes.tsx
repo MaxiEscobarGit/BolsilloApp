@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { Text } from '@/components/ui';
+import { Card, Text } from '@/components/ui';
 import { formatCents } from '@/lib/money';
 import { colors, radius, space } from '@/theme';
 
@@ -40,8 +40,6 @@ export function Bubble({ msg }: { msg: Msg }) {
           borderBottomRightRadius: mine ? radius.sm : radius.lg,
           borderBottomLeftRadius: mine ? radius.lg : radius.sm,
           backgroundColor: mine ? colors.green : colors.surface,
-          borderWidth: mine ? 0 : 1,
-          borderColor: failed ? colors.coral : colors.line,
         }}>
         <Text style={{ color: mine ? colors.onGreen : failed ? colors.coral : colors.text }}>{msg.content}</Text>
       </View>
@@ -54,9 +52,7 @@ export function Bubble({ msg }: { msg: Msg }) {
 function Receipt({ data, corrected }: { data: ChatData; corrected: boolean }) {
   const income = data.type === 'INCOME';
   return (
-    <View
-      accessible
-      style={{ backgroundColor: colors.surfaceHigh, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, padding: space.md, gap: space.sm }}>
+    <Card style={{ backgroundColor: colors.surfaceHigh, gap: space.sm }}>
       <Text variant="label" style={{ color: colors.green }}>{corrected ? 'Corregido' : income ? 'Ingreso anotado' : 'Gasto anotado'}</Text>
       <Text variant="heading" style={{ color: income ? colors.green : colors.coral }}>
         {(income ? '+ ' : '− ') + money(data.amount ?? 0, data.currency ?? 'ARS')}
@@ -69,7 +65,7 @@ function Receipt({ data, corrected }: { data: ChatData; corrected: boolean }) {
           Aprendí que “{data.alias}” es {data.category}
         </Text>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -88,7 +84,7 @@ export function Typing() {
   return (
     <View
       accessibilityLabel="El asistente está escribiendo"
-      style={{ alignSelf: 'flex-start', flexDirection: 'row', gap: 6, paddingHorizontal: space.md, paddingVertical: space.md, borderRadius: radius.lg, borderBottomLeftRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }}>
+      style={{ alignSelf: 'flex-start', flexDirection: 'row', gap: 6, paddingHorizontal: space.md, paddingVertical: space.md, borderRadius: radius.lg, borderBottomLeftRadius: radius.sm, backgroundColor: colors.surface }}>
       {[0, 1, 2].map((i) => (
         <Animated.View
           key={i}

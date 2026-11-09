@@ -119,7 +119,7 @@ export default function Asistente() {
           />
         )}
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm, backgroundColor: colors.bg }}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
@@ -132,7 +132,7 @@ export default function Asistente() {
             onSubmitEditing={() => send(draft)}
             returnKeyType="send"
             accessibilityLabel="Mensaje para el asistente"
-            style={[type.body, { flex: 1, color: colors.text, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, paddingHorizontal: space.md, paddingTop: 12, paddingBottom: 12, minHeight: 48, maxHeight: 140 }]}
+            style={[type.body, { flex: 1, color: colors.text, backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.md, paddingTop: 12, paddingBottom: 12, minHeight: 48, maxHeight: 140 }]}
           />
           <Pressable
             onPress={() => send(draft)}
