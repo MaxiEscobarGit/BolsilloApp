@@ -113,8 +113,9 @@ export function Field({ label, error, ...props }: TextInputProps & { label: stri
             color: colors.text,
             backgroundColor: colors.surface,
             borderRadius: radius.md,
-            borderWidth: 1,
-            borderColor: error ? colors.coral : colors.line,
+            // Borderless like the rest of the UI; the outline only appears to flag an error.
+            borderWidth: error ? 1 : 0,
+            borderColor: colors.coral,
             paddingHorizontal: space.md,
             minHeight: 52,
           },
