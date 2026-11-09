@@ -19,8 +19,6 @@ export default function AppTabs() {
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: colors.line,
           paddingBottom: Math.max(insets.bottom, space.sm),
           paddingTop: space.sm,
         }}>
