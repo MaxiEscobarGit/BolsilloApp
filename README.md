@@ -49,6 +49,10 @@ cd api
 ./mvnw spring-boot:run
 ```
 
+### App (Expo / React Native)
+
+La app vive en [`mobile/`](mobile/README.md): mobile first, también corre en web. Ver ahí cómo arrancarla.
+
 ### Swagger / OpenAPI
 
 Con la API corriendo:
