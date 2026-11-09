@@ -44,7 +44,8 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   return (
     <View
       style={[
-        { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, padding: space.md },
+        // Flat and borderless: surfaces separate by tone, not by outline.
+        { backgroundColor: colors.surface, borderRadius: radius.md, padding: space.lg },
         style,
       ]}>
       {children}

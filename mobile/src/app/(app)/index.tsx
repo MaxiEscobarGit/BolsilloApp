@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { formatCents } from '@/lib/money';
 import { useSession } from '@/lib/session';
-import { colors, space } from '@/theme';
+import { colors, fonts, radius, space } from '@/theme';
 
 // Mirrors api/.../metrics/dto/SummaryResponse.java (only the fields this screen reads).
 type Summary = {
@@ -35,38 +35,26 @@ export default function Inicio() {
 
   const expenses = summary?.byCategory.filter((c) => c.type === 'EXPENSE') ?? [];
   const maxExpense = Math.max(1, ...expenses.map((c) => c.totalCents));
+  const savings = summary?.totalIncomeCents ? Math.round((summary.balanceCents / summary.totalIncomeCents) * 100) : null;
 
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ gap: space.lg, paddingVertical: space.lg }}
+        contentContainerStyle={{ gap: space.md, paddingVertical: space.lg }}
         refreshControl={
           <RefreshControl refreshing={refreshing} tintColor={colors.green} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />
         }>
-        <View style={{ gap: space.sm }}>
+        <View style={{ gap: space.sm, marginBottom: space.sm }}>
           <Text variant="label">Este mes</Text>
           <Text variant="title">Hola, {user?.displayName}</Text>
         </View>
 
         {error ? <Text style={{ color: colors.coral }}>{error}</Text> : null}
 
-        <Card style={{ gap: space.sm }}>
-          <Text variant="label">Balance</Text>
-          <Text variant="display" style={{ color: (summary?.balanceCents ?? 0) < 0 ? colors.coral : colors.green }}>
-            {summary ? formatCents(summary.balanceCents) : '—'}
-          </Text>
-        </Card>
-
-        <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Card style={{ flex: 1, gap: space.xs }}>
-            <Text variant="label">Ingresos</Text>
-            <Text variant="heading">{summary ? formatCents(summary.totalIncomeCents) : '—'}</Text>
-          </Card>
-          <Card style={{ flex: 1, gap: space.xs }}>
-            <Text variant="label">Gastos</Text>
-            <Text variant="heading" style={{ color: colors.coral }}>{summary ? formatCents(summary.totalExpenseCents) : '—'}</Text>
-          </Card>
-        </View>
+        <Stat highlight value={summary ? formatCents(summary.balanceCents) : '—'} caption={(summary?.balanceCents ?? 0) < 0 ? 'Gastaste más\nde lo que entró' : 'Te queda\neste mes'} />
+        <Stat value={summary ? formatCents(summary.totalIncomeCents) : '—'} caption={'Entró\neste mes'} />
+        <Stat value={summary ? formatCents(summary.totalExpenseCents) : '—'} caption={'Salió\neste mes'} />
+        <Stat value={savings === null ? '—' : `${savings}%`} caption={'De lo que entró,\nlo ahorraste'} />
 
         <Card style={{ gap: space.md }}>
           <Text variant="label">Gastos por categoría</Text>
@@ -88,5 +76,29 @@ export default function Inicio() {
         </Card>
       </ScrollView>
     </Screen>
+  );
+}
+
+// Stat tile from the reference site: big number top-left, short caption bottom-right, no border.
+// The highlighted one carries the green gradient.
+function Stat({ value, caption, highlight }: { value: string; caption: string; highlight?: boolean }) {
+  const ink = highlight ? colors.onGreen : colors.text;
+  return (
+    <View
+      style={{
+        minHeight: 128,
+        padding: space.lg,
+        borderRadius: radius.md,
+        justifyContent: 'space-between',
+        backgroundColor: highlight ? colors.green : colors.surface,
+        backgroundImage: highlight ? `linear-gradient(135deg, ${colors.greenDeep}, ${colors.green})` : undefined,
+      }}>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: fonts.regular, fontSize: 48, lineHeight: 52, letterSpacing: -2, color: ink }}>
+        {value}
+      </Text>
+      <Text variant="small" style={{ alignSelf: 'flex-end', textAlign: 'right', color: highlight ? colors.onGreen : colors.textMuted }}>
+        {caption}
+      </Text>
+    </View>
   );
 }
