@@ -74,8 +74,6 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
         justifyContent: 'center',
         paddingHorizontal: space.md,
         borderRadius: radius.pill,
-        borderWidth: 1,
-        borderColor: selected ? colors.green : colors.line,
         backgroundColor: selected ? 'rgba(0, 255, 133, 0.12)' : colors.surface,
         opacity: pressed ? 0.7 : 1,
       })}>

@@ -162,7 +162,7 @@ function Row({ tx, emoji }: { tx: Transaction; emoji: string }) {
       style={({ pressed }) => ({
         flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, minHeight: 64,
         backgroundColor: pressed ? colors.surfaceHigh : colors.surface,
-        borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line,
+        borderRadius: radius.md,
       })}>
       <View style={{ flex: 1, gap: 2 }}>
         <Text numberOfLines={1} style={{ fontFamily: fonts.medium }}>{tx.description}</Text>
@@ -172,7 +172,7 @@ function Row({ tx, emoji }: { tx: Transaction; emoji: string }) {
         {tags.length > 0 && (
           <View style={{ flexDirection: 'row', gap: space.xs, marginTop: 2 }}>
             {tags.map((t) => (
-              <Text key={t} variant="label" style={{ fontSize: 10, borderWidth: 1, borderColor: colors.line, borderRadius: radius.sm, paddingHorizontal: 6 }}>
+              <Text key={t} variant="label" style={{ fontSize: 10, backgroundColor: colors.surfaceHigh, borderRadius: radius.sm, paddingHorizontal: 6 }}>
                 {t}
               </Text>
             ))}
