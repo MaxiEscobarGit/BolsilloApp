@@ -6,7 +6,7 @@ App de finanzas personales con un asistente AI conversacional como diferencial c
 Los usuarios registran gastos, ingresos y deudas hablando en lenguaje natural.
 El asistente parsea, categoriza y responde preguntas sobre métricas financieras.
 
-Este directorio (`api/`) es el backend. El frontend web y la app mobile viven en repos separados.
+Este directorio (`api/`) es el backend. La app (mobile first, Expo / React Native, también corre en web) vive en `mobile/` de este mismo repo: ver `mobile/CLAUDE.md`.
 
 ---
 
@@ -26,8 +26,7 @@ Este directorio (`api/`) es el backend. El frontend web y la app mobile viven en
 | Boilerplate     | Lombok                                                                     |
 | AI              | Anthropic API — Haiku para parseo, Sonnet para análisis                    |
 | Tests           | JUnit 5 · MockMvc · Testcontainers 1.20.4 (`postgres:16-alpine`)           |
-| Frontend web    | Next.js (repo separado)                                                    |
-| Mobile          | Expo / React Native (repo separado)                                        |
+| App             | Expo / React Native en `mobile/` (mobile first; web vía Expo web)          |
 | Despliegue      | Railway (backend) · Supabase (DB)                                          |
 
 ---
