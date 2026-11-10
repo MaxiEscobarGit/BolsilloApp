@@ -4,7 +4,7 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-import { Notice, Segmented, daysUntil, deudasError, formatDate, money, patch } from '@/components/deudas/shared';
+import { Notice, Segmented, daysUntil, deudasError, formatDate, money } from '@/components/deudas/shared';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, radius, space } from '@/theme';
@@ -138,7 +138,7 @@ function DebtList({
     setPaying(id);
     setFailed(undefined);
     try {
-      const updated = await patch<Debt>(`/api/debts/${id}/pay`);
+      const updated = await api.patch<Debt>(`/api/debts/${id}/pay`, undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onChange((s) => ({ ...s, data: s.data?.map((d) => (d.id === id ? updated : d)) }));
     } catch (e) {
@@ -179,7 +179,7 @@ function DebtList({
             : days <= 7 ? { text: `Vence en ${days} ${days === 1 ? 'día' : 'días'}`, urgent: true }
             : { text: `Vence el ${formatDate(d.dueDate!)}`, urgent: false };
           return (
-            <Card key={d.id} style={{ gap: space.sm, borderColor: due?.urgent ? colors.coral : colors.line }}>
+            <Card key={d.id} style={{ gap: space.sm }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text variant="label" style={{ color: owed ? colors.green : colors.coral }}>{owed ? 'Te debe' : 'Le debés'}</Text>

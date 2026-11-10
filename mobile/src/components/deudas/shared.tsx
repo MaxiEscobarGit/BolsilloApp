@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui';
-import { API_URL, ApiError, refresh } from '@/lib/api';
+import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { formatCents } from '@/lib/money';
 import { colors, fonts, radius, space } from '@/theme';
@@ -34,16 +34,6 @@ const codes: Record<string, string> = {
 };
 export const deudasError = (e: unknown) => (e instanceof ApiError && codes[e.code]) || errorMessage(e);
 
-// shortcut: lib/api.ts only exposes get/post and keeps the access token private, so PATCH asks the
-// shared single-flight refresh for a fresh token. Costs one extra request; replace with api.patch once it exists.
-export async function patch<T>(path: string): Promise<T> {
-  const auth = await refresh();
-  if (!auth) throw new ApiError(401, 'UNAUTHORIZED', 'Sesión vencida');
-  const res = await fetch(API_URL + path, { method: 'PATCH', headers: { Authorization: `Bearer ${auth.accessToken}` } });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, body.code ?? 'UNKNOWN', body.error ?? `HTTP ${res.status}`);
-  return body;
-}
 
 // Segmented control. No sliding pill: it's switched dozens of times a session (animate-expo §1).
 export function Segmented<T extends string>({
@@ -58,7 +48,7 @@ export function Segmented<T extends string>({
   return (
     <View
       accessibilityRole="tablist"
-      style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 3 }}>
+      style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.md, padding: 3 }}>
       {options.map((o) => {
         const active = o.value === value;
         return (

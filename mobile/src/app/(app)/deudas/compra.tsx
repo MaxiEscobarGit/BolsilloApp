@@ -105,11 +105,9 @@ export default function NuevaCompra() {
                     paddingHorizontal: space.md,
                     justifyContent: 'center',
                     borderRadius: radius.pill,
-                    borderWidth: 1,
-                    borderColor: active ? colors.green : colors.line,
-                    backgroundColor: active ? colors.surfaceHigh : colors.bg,
+                    backgroundColor: active ? colors.surfaceHigh : colors.surface,
                   }}>
-                  <Text variant="small">{c.emoji} {c.name}</Text>
+                  <Text variant="small" style={{ color: active ? colors.green : colors.text }}>{c.emoji} {c.name}</Text>
                 </Pressable>
               );
             })}
