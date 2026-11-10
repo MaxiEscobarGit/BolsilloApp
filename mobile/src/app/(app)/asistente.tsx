@@ -119,7 +119,7 @@ export default function Asistente() {
           />
         )}
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm, backgroundColor: colors.bg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl, backgroundColor: colors.bg }}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
