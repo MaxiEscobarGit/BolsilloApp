@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
+import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
 import { Button, Field, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, space } from '@/theme';
@@ -168,7 +168,7 @@ export default function MovimientoSheet() {
               <Text variant="label">Categoría</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
                 {categories.filter((c) => txType === 'DEBT' || c.type === txType).map((c) => (
-                  <Chip key={c.id} label={`${c.emoji ?? ''} ${c.name}`.trim()} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+                  <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
                 ))}
               </View>
               {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}

@@ -1,15 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { Segmented, SheetHeader, deudasError, isDate, money, parseAmount, today } from '@/components/deudas/shared';
+import { categoryIcon } from '@/components/movimientos/shared';
 import { Button, Field, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, radius, space } from '@/theme';
 
 // Copied from api/.../categories/dto/CategoryResponse (fields we read).
-type Category = { id: string; name: string; emoji: string; type: 'EXPENSE' | 'INCOME' };
+type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME' };
 
 // POST /api/purchases (CreatePurchaseRequest).
 export default function NuevaCompra() {
@@ -103,11 +105,14 @@ export default function NuevaCompra() {
                   style={{
                     minHeight: 44,
                     paddingHorizontal: space.md,
-                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: space.xs,
                     borderRadius: radius.pill,
                     backgroundColor: active ? colors.surfaceHigh : colors.surface,
                   }}>
-                  <Text variant="small" style={{ color: active ? colors.green : colors.text }}>{c.emoji} {c.name}</Text>
+                  <SymbolView name={categoryIcon(c.name)} size={16} tintColor={active ? colors.green : colors.text} />
+                  <Text variant="small" style={{ color: active ? colors.green : colors.text }}>{c.name}</Text>
                 </Pressable>
               );
             })}

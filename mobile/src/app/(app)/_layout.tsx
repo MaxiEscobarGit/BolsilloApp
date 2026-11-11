@@ -47,7 +47,8 @@ function Tab({ label, icon, isFocused, ...props }: PressableProps & { isFocused?
   return (
     <Pressable {...props} accessibilityLabel={label} style={{ flex: 1, alignItems: 'center', gap: 4, minHeight: 44, justifyContent: 'center' }}>
       <SymbolView name={icon} size={24} tintColor={color} />
-      <Text style={{ fontFamily: fonts.mono, fontSize: 10, letterSpacing: 0.6, textTransform: 'uppercase', color }}>{label}</Text>
+      {/* 9 pt Geist Mono (0.6 em advance) + 0.3 tracking: "MOVIMIENTOS" takes 63 pt of the 75 pt tab on a 375 pt phone. */}
+      <Text numberOfLines={1} style={{ fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.3, textTransform: 'uppercase', color }}>{label}</Text>
     </Pressable>
   );
 }
