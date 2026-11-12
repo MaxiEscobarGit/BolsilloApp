@@ -37,7 +37,8 @@ export const type = {
 } as const;
 
 export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
-export const radius = { sm: 4, md: 8, lg: 14, pill: 999 } as const;
+// Apple-like rounding: generous radii that grow with the element (chips < cards < sheets).
+export const radius = { sm: 10, md: 20, lg: 28, pill: 999 } as const;
 
 export const motion = {
   easeOut: Easing.bezier(0.23, 1, 0.32, 1),
