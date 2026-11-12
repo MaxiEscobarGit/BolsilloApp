@@ -20,25 +20,24 @@ export default function AppTabs() {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: space.sm,
           marginHorizontal: space.md,
           paddingBottom: Math.max(insets.bottom, space.md),
           paddingTop: space.sm,
         }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.pill, paddingVertical: space.sm }}>
-          <TabTrigger name="index" href="/" asChild>
-            <Tab label="Inicio" icon={{ ios: 'house.fill', android: 'home', web: 'home' }} />
-          </TabTrigger>
-          <TabTrigger name="movimientos" href="/movimientos" asChild>
-            <Tab label="Movimientos" icon={{ ios: 'list.bullet.rectangle', android: 'receipt_long', web: 'receipt_long' }} />
-          </TabTrigger>
-          <TabTrigger name="deudas" href="/deudas" asChild>
-            <Tab label="Deudas" icon={{ ios: 'arrow.left.arrow.right', android: 'swap_horiz', web: 'swap_horiz' }} />
-          </TabTrigger>
-          <TabTrigger name="perfil" href="/perfil" asChild>
-            <Tab label="Perfil" icon={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} />
-          </TabTrigger>
-        </View>
+        {/* Triggers must be direct children of TabList (that is how expo-router registers them),
+            so the pill is drawn by the tabs themselves: surface background, rounded ends. */}
+        <TabTrigger name="index" href="/" asChild>
+          <Tab label="Inicio" edge="left" icon={{ ios: 'house.fill', android: 'home', web: 'home' }} />
+        </TabTrigger>
+        <TabTrigger name="movimientos" href="/movimientos" asChild>
+          <Tab label="Movimientos" icon={{ ios: 'list.bullet.rectangle', android: 'receipt_long', web: 'receipt_long' }} />
+        </TabTrigger>
+        <TabTrigger name="deudas" href="/deudas" asChild>
+          <Tab label="Deudas" icon={{ ios: 'arrow.left.arrow.right', android: 'swap_horiz', web: 'swap_horiz' }} />
+        </TabTrigger>
+        <TabTrigger name="perfil" href="/perfil" asChild>
+          <Tab label="Perfil" edge="right" icon={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} />
+        </TabTrigger>
         <TabTrigger name="asistente" href="/asistente" asChild>
           <ChatButton />
         </TabTrigger>
@@ -47,10 +46,25 @@ export default function AppTabs() {
   );
 }
 
-function Tab({ label, icon, isFocused, ...props }: PressableProps & { isFocused?: boolean; label: string; icon: Icon }) {
+function Tab({ label, icon, edge, isFocused, ...props }: PressableProps & { isFocused?: boolean; label: string; icon: Icon; edge?: 'left' | 'right' }) {
   const color = isFocused ? colors.green : colors.textFaint;
   return (
-    <Pressable {...props} accessibilityLabel={label} style={{ flex: 1, alignItems: 'center', gap: 4, minHeight: 44, justifyContent: 'center' }}>
+    <Pressable
+      {...props}
+      accessibilityLabel={label}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
+        minHeight: 56,
+        justifyContent: 'center',
+        backgroundColor: colors.surface,
+        marginRight: edge === 'right' ? space.sm : 0,
+        borderTopLeftRadius: edge === 'left' ? radius.pill : 0,
+        borderBottomLeftRadius: edge === 'left' ? radius.pill : 0,
+        borderTopRightRadius: edge === 'right' ? radius.pill : 0,
+        borderBottomRightRadius: edge === 'right' ? radius.pill : 0,
+      }}>
       <SymbolView name={icon} size={24} tintColor={color} />
       {/* 9 pt Geist Mono (0.6 em advance) + 0.3 tracking: "MOVIMIENTOS" takes 63 pt of the 75 pt tab on a 375 pt phone. */}
       <Text numberOfLines={1} style={{ fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.3, textTransform: 'uppercase', color }}>{label}</Text>
