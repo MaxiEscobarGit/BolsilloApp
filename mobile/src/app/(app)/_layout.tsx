@@ -3,7 +3,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, Text, View, type PressableProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, fonts, space } from '@/theme';
+import { colors, fonts, radius, space } from '@/theme';
 
 type Icon = SymbolViewProps['name'];
 
@@ -14,28 +14,33 @@ export default function AppTabs() {
   return (
     <Tabs style={{ flex: 1, backgroundColor: colors.bg }}>
       <TabSlot style={{ flex: 1 }} />
+      {/* Floating pill with the four tabs, and the assistant as a separate button pinned to the right.
+          Kept in the normal flow (not absolute) so screens never end up hidden under it. */}
       <TabList
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: colors.surface,
-          paddingBottom: Math.max(insets.bottom, space.sm),
+          gap: space.sm,
+          marginHorizontal: space.md,
+          paddingBottom: Math.max(insets.bottom, space.md),
           paddingTop: space.sm,
         }}>
-        <TabTrigger name="index" href="/" asChild>
-          <Tab label="Inicio" icon={{ ios: 'house.fill', android: 'home', web: 'home' }} />
-        </TabTrigger>
-        <TabTrigger name="movimientos" href="/movimientos" asChild>
-          <Tab label="Movimientos" icon={{ ios: 'list.bullet.rectangle', android: 'receipt_long', web: 'receipt_long' }} />
-        </TabTrigger>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.pill, paddingVertical: space.sm }}>
+          <TabTrigger name="index" href="/" asChild>
+            <Tab label="Inicio" icon={{ ios: 'house.fill', android: 'home', web: 'home' }} />
+          </TabTrigger>
+          <TabTrigger name="movimientos" href="/movimientos" asChild>
+            <Tab label="Movimientos" icon={{ ios: 'list.bullet.rectangle', android: 'receipt_long', web: 'receipt_long' }} />
+          </TabTrigger>
+          <TabTrigger name="deudas" href="/deudas" asChild>
+            <Tab label="Deudas" icon={{ ios: 'arrow.left.arrow.right', android: 'swap_horiz', web: 'swap_horiz' }} />
+          </TabTrigger>
+          <TabTrigger name="perfil" href="/perfil" asChild>
+            <Tab label="Perfil" icon={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} />
+          </TabTrigger>
+        </View>
         <TabTrigger name="asistente" href="/asistente" asChild>
-          <CenterTab />
-        </TabTrigger>
-        <TabTrigger name="deudas" href="/deudas" asChild>
-          <Tab label="Deudas" icon={{ ios: 'arrow.left.arrow.right', android: 'swap_horiz', web: 'swap_horiz' }} />
-        </TabTrigger>
-        <TabTrigger name="perfil" href="/perfil" asChild>
-          <Tab label="Perfil" icon={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }} />
+          <ChatButton />
         </TabTrigger>
       </TabList>
     </Tabs>
@@ -53,22 +58,19 @@ function Tab({ label, icon, isFocused, ...props }: PressableProps & { isFocused?
   );
 }
 
-// The assistant is the app's core, so it gets the raised button in the middle.
-function CenterTab({ isFocused, ...props }: PressableProps & { isFocused?: boolean }) {
+// The assistant is the app's core, so it gets its own green button next to the pill.
+function ChatButton({ isFocused, ...props }: PressableProps & { isFocused?: boolean }) {
   return (
-    <Pressable {...props} accessibilityLabel="Asistente" style={{ flex: 1, alignItems: 'center' }}>
+    <Pressable {...props} accessibilityLabel="Asistente" hitSlop={8}>
       {({ pressed }) => (
         <View
           style={{
             width: 56,
             height: 56,
-            marginTop: -28,
             borderRadius: 28,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.green,
-            borderWidth: 4,
-            borderColor: colors.bg,
             opacity: isFocused ? 1 : 0.92,
             transform: [{ scale: pressed ? 0.94 : 1 }],
           }}>
