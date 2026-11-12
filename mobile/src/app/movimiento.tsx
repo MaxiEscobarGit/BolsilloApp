@@ -1,7 +1,6 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
@@ -12,10 +11,10 @@ import { colors, space } from '@/theme';
 // "12.000,50" (es-AR) or "12000.50" → 12000.5. With a comma, dots are thousands separators.
 const parseAmount = (s: string) => Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
 
-// Add (no id) or edit (?id=) a transaction. A short, abandonable task: native form sheet (animate-expo).
+// Add (no id) or edit (?id=) a transaction. A short, abandonable task: native form sheet (animate-expo),
+// configured in app/_layout.tsx.
 export default function MovimientoSheet() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const reduced = useReducedMotion();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loaded, setLoaded] = useState(!id);
   const [amount, setAmount] = useState('');
@@ -100,15 +99,6 @@ export default function MovimientoSheet() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Stack.Screen
-        options={{
-          presentation: 'formSheet',
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          animation: reduced ? 'fade' : 'default',
-          contentStyle: { backgroundColor: colors.bg },
-        }}
-      />
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
         {!loaded ? (
           error ? (
