@@ -1,6 +1,5 @@
 package bolsilloApp.api.support;
 
-import bolsilloApp.api.auth.LoginAttemptService;
 import bolsilloApp.api.auth.dto.AuthResponse;
 import bolsilloApp.api.auth.dto.RegisterRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,9 +54,6 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    protected LoginAttemptService loginAttemptService;
-
     /** Para tests que necesitan levantar la app con otra configuracion contra la misma DB. */
     public static PostgreSQLContainer<?> postgres() {
         return postgres;
@@ -65,7 +61,7 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
-        loginAttemptService.reset();
+        jdbcTemplate.execute("DELETE FROM auth_attempts");
         jdbcTemplate.execute("DELETE FROM user_aliases");
         jdbcTemplate.execute("DELETE FROM chat_messages");
         jdbcTemplate.execute("DELETE FROM transactions");

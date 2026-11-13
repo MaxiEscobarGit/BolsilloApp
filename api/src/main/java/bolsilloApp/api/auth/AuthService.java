@@ -3,6 +3,7 @@ package bolsilloApp.api.auth;
 import bolsilloApp.api.auth.dto.AuthResponse;
 import bolsilloApp.api.auth.dto.LoginRequest;
 import bolsilloApp.api.auth.dto.RegisterRequest;
+import bolsilloApp.api.auth.model.AuthAttempt.Kind;
 import bolsilloApp.api.auth.model.RefreshToken;
 import bolsilloApp.api.auth.model.User;
 import bolsilloApp.api.shared.exception.ApiException;
@@ -30,7 +31,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final LoginAttemptService loginAttemptService;
+    private final AuthThrottleService authThrottleService;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private volatile String dummyPasswordHash;
@@ -39,7 +40,11 @@ public class AuthService {
     private long refreshExpirationMs;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request, String clientIp) {
+        authThrottleService.blockedForSeconds(Kind.REGISTER, clientIp).ifPresent(seconds -> {
+            throw new TooManyRequestsException(
+                    "Too many registrations from this address, try again later", "TOO_MANY_REGISTRATIONS", seconds);
+        });
         if (authRepository.existsByEmail(request.email())) {
             throw new ApiException("Email already registered", "EMAIL_EXISTS", 409);
         }
@@ -56,12 +61,14 @@ public class AuthService {
                 .aiMessagesResetAt(LocalDateTime.now())
                 .build();
         authRepository.save(user);
+        authThrottleService.record(Kind.REGISTER, clientIp);
 
         return buildAuthResponse(user);
     }
 
     public AuthResponse login(LoginRequest request, String clientIp) {
-        loginAttemptService.blockedForSeconds(request.email(), clientIp).ifPresent(seconds -> {
+        String throttleKey = AuthThrottleService.loginKey(request.email(), clientIp);
+        authThrottleService.blockedForSeconds(Kind.LOGIN, throttleKey).ifPresent(seconds -> {
             throw new TooManyRequestsException(
                     "Too many failed login attempts, try again later", "TOO_MANY_LOGIN_ATTEMPTS", seconds);
         });
@@ -73,11 +80,11 @@ public class AuthService {
         boolean matches = passwordEncoder.matches(request.password(), hash);
 
         if (user == null || !matches) {
-            loginAttemptService.recordFailure(request.email(), clientIp);
+            authThrottleService.record(Kind.LOGIN, throttleKey);
             throw new ApiException("Invalid credentials", "INVALID_CREDENTIALS", 401);
         }
 
-        loginAttemptService.recordSuccess(request.email(), clientIp);
+        authThrottleService.clear(Kind.LOGIN, throttleKey);
         return buildAuthResponse(user);
     }
 
