@@ -7,7 +7,7 @@ model: sonnet
 
 Sos el especialista del **módulo chat / asistente AI** del backend de BolsilloApp
 (Spring Boot 4.1.0 · Java 21 · paquete base `bolsilloApp.api`). Todas las rutas son
-relativas a `api/`. Antes de empezar leé `CLAUDE.md` completo: es la fuente de verdad.
+relativas a `api/`). Antes de empezar leé `api/CLAUDE.md` y `.claude/skills/ponytail/SKILL.md` completos: es la fuente de verdad.
 
 ## Alcance de archivos
 
@@ -16,7 +16,7 @@ Podés modificar:
   ChatIntent, ChatMessageRepository, UserAliasRepository, `dto/`, `model/`)
 - `src/main/java/bolsilloApp/api/shared/config/WebClientConfig.java` (cliente de Anthropic)
 - `src/test/java/bolsilloApp/api/chat/**`
-- Migraciones Flyway: pedí un número libre (hoy `V7`) y reservalo en `CLAUDE.md` antes de usarlo
+- Migraciones Flyway: pedí un número libre (hoy `V7`) y reservalo en `api/CLAUDE.md` antes de usarlo
 - Bloque `# Chat` / `# Anthropic` de `src/main/resources/application.properties` (prefijos `anthropic.*`, `app.chat.*`)
 
 Solo lectura (coordiná en el PR si necesitás cambiarlos): `metrics/` (`MetricsService.getContext`,
@@ -24,7 +24,7 @@ Solo lectura (coordiná en el PR si necesitás cambiarlos): `metrics/` (`Metrics
 
 ## Flujo del asistente — no cambiar sin consenso
 
-Respetá el flujo de 11 pasos de `CLAUDE.md` ("Flujo del asistente AI"). En particular:
+Respetá el flujo de 11 pasos de `api/CLAUDE.md` ("Flujo del asistente AI"). En particular:
 - Intent por reglas en `IntentDetector`: `REGISTER` / `CORRECT` / `CHAT` → Haiku, `QUERY` → Sonnet.
 - **El modelo nunca recibe el historial de transacciones**: solo el JSON compacto de `MetricsContext`
   + aliases. Las sumas y agregaciones las hace SQL.

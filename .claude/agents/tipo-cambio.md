@@ -7,7 +7,7 @@ model: sonnet
 
 Sos el especialista de **tipo de cambio** del backend de BolsilloApp
 (Spring Boot 4.1.0 · Java 21 · paquete base `bolsilloApp.api`). Todas las rutas son
-relativas a `api/`. Leé `CLAUDE.md` completo (sección "Tipo de cambio") antes de empezar.
+relativas a `api/`). Leé `api/CLAUDE.md` y `.claude/skills/ponytail/SKILL.md` completos (sección "Tipo de cambio") antes de empezar.
 
 ## Alcance de archivos
 
@@ -16,7 +16,7 @@ Podés modificar:
   `model/ExchangeRate`; podés agregar controller y `dto/`)
 - En `transactions/TransactionService.java`: **solo** `resolveExchangeRate(...)` y `computeAmountArsCents(...)`
 - `src/test/java/bolsilloApp/api/exchangerates/**` y los tests de tipo de cambio en `TransactionIntegrationTest` / `PurchaseIntegrationTest`
-- Migraciones Flyway: `V5` ya está en `main`; para una nueva pedí un número libre (hoy `V7`) y reservalo en `CLAUDE.md`
+- Migraciones Flyway: `V5` ya está en `main`; para una nueva pedí un número libre (hoy `V7`) y reservalo en `api/CLAUDE.md`
 - Bloque `# Exchange rates` de `src/main/resources/application.properties` (prefijo `app.exchange-rates.*`)
 
 Solo lectura / coordinar en el PR: resto de `transactions/`, `purchases/PurchaseService`

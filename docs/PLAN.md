@@ -13,7 +13,7 @@ App de finanzas personales con asistente IA: registrás gastos, ingresos y deuda
 | Backend (Spring Boot 4.1 · Java 21 · Postgres · Flyway) | `api/` | `api/CLAUDE.md` |
 | App (Expo SDK 58 · React Native · mobile first, también web) | `mobile/` | `mobile/CLAUDE.md` |
 | Skills de Claude para todo el repo | `.claude/skills/` | `ponytail`, `apple-design`, `animate-expo` |
-| Subagentes del backend | `api/.claude/agents/` | `gestor-requerimientos`, `chat-ai`, `seguridad`, `tipo-cambio`, `infra` |
+| Subagentes (backend, front y seguridad) | `.claude/agents/` | `front`, `seguridad`, `chat-ai`, `tipo-cambio`, `infra`, `gestor-requerimientos` |
 
 Reglas de trabajo: **ponytail siempre** (el cambio más chico que resuelve todo, sin dependencias ni
 abstracciones de más). Para la UI, **apple-design** y **animate-expo**. Textos en español rioplatense.
