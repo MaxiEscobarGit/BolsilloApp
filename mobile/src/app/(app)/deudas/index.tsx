@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 
 import { Notice, Segmented, deudasError, dueInfo, formatDate, money, type Debt, type Purchase } from '@/components/deudas/shared';
-import { AddButton, Button, Card, Screen, Text } from '@/components/ui';
+import { AddButton, Button, Card, Screen, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, radius, space } from '@/theme';
 
@@ -12,6 +12,7 @@ type Section = 'deudas' | 'cuotas';
 type Load<T> = { data?: T; error?: string; loading: boolean };
 
 export default function Deudas() {
+  const bottomInset = useBottomBarInset();
   const [section, setSection] = useState<Section>('deudas');
   const [status, setStatus] = useState<Debt['status']>('PENDING');
   const [debts, setDebts] = useState<Load<Debt[]>>({ loading: true });
@@ -59,7 +60,7 @@ export default function Deudas() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingTop: space.md, paddingBottom: space.xxl, gap: space.md }}
+        contentContainerStyle={{ paddingTop: space.md, paddingBottom: bottomInset, gap: space.md }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.green} />}>
         {current.loading && !current.data ? (
           <ActivityIndicator color={colors.green} style={{ paddingVertical: space.xxl }} accessibilityLabel="Cargando" />

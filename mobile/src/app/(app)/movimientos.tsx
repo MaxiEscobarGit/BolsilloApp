@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { categoryIcon, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { AddButton, Button, Card, Screen, Select, Text } from '@/components/ui';
+import { AddButton, Button, Card, Screen, Select, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { colors, fonts, radius, space } from '@/theme';
@@ -14,6 +14,7 @@ const monthName = (d: Date) => d.toLocaleDateString('es-AR', { month: 'long', ye
 const shortDate = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 
 export default function Movimientos() {
+  const bottomInset = useBottomBarInset();
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [txType, setTxType] = useState<'' | 'EXPENSE' | 'INCOME'>('');
   const [categoryId, setCategoryId] = useState('');
@@ -105,7 +106,7 @@ export default function Movimientos() {
         <FlatList
           data={items}
           keyExtractor={(t) => t.id}
-          contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.sm, flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: bottomInset, gap: space.sm, flexGrow: 1 }}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           renderItem={({ item }) => <Row tx={item} />}
