@@ -44,37 +44,42 @@ export default function Deudas() {
   const current = section === 'deudas' ? debts : purchases;
 
   return (
-    <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.lg, paddingBottom: space.md }}>
-        <Text variant="title">Deudas y cuotas</Text>
-        <AddButton
-          accessibilityLabel={section === 'deudas' ? 'Nueva deuda' : 'Nueva compra en cuotas'}
-          onPress={() => router.push(section === 'deudas' ? '/deudas/nueva' : '/deudas/compra')}
-        />
-      </View>
+    <Screen
+      header={
+        <>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.lg, paddingBottom: space.md }}>
+            <Text variant="title">Deudas y cuotas</Text>
+            <AddButton
+              accessibilityLabel={section === 'deudas' ? 'Nueva deuda' : 'Nueva compra en cuotas'}
+              onPress={() => router.push(section === 'deudas' ? '/deudas/nueva' : '/deudas/compra')}
+            />
+          </View>
 
-      <Segmented
-        options={[{ value: 'deudas', label: 'Deudas' }, { value: 'cuotas', label: 'Cuotas' }]}
-        value={section}
-        onChange={setSection}
-      />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: space.md, paddingBottom: bottomInset, gap: space.md }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.green} />}>
-        {current.loading && !current.data ? (
-          <ActivityIndicator color={colors.green} style={{ paddingVertical: space.xxl }} accessibilityLabel="Cargando" />
-        ) : current.error ? (
-          <Notice title="No pudimos cargar esto" body={current.error}>
-            <Button title="Reintentar" kind="ghost" onPress={retry} />
-          </Notice>
-        ) : section === 'deudas' ? (
-          <DebtList debts={debts.data!} status={status} setStatus={setStatus} onChange={setDebts} />
-        ) : (
-          <PurchaseList purchases={purchases.data!} />
-        )}
-      </ScrollView>
+          <Segmented
+            options={[{ value: 'deudas', label: 'Deudas' }, { value: 'cuotas', label: 'Cuotas' }]}
+            value={section}
+            onChange={setSection}
+          />
+        </>
+      }>
+      {(topInset) => (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: topInset, paddingBottom: bottomInset, gap: space.md }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.green} />}>
+          {current.loading && !current.data ? (
+            <ActivityIndicator color={colors.green} style={{ paddingVertical: space.xxl }} accessibilityLabel="Cargando" />
+          ) : current.error ? (
+            <Notice title="No pudimos cargar esto" body={current.error}>
+              <Button title="Reintentar" kind="ghost" onPress={retry} />
+            </Notice>
+          ) : section === 'deudas' ? (
+            <DebtList debts={debts.data!} status={status} setStatus={setStatus} onChange={setDebts} />
+          ) : (
+            <PurchaseList purchases={purchases.data!} />
+          )}
+        </ScrollView>
+      )}
     </Screen>
   );
 }

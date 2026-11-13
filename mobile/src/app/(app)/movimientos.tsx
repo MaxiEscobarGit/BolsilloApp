@@ -62,52 +62,54 @@ export default function Movimientos() {
   const visibleCategories = categories.filter((c) => !txType || c.type === txType);
 
   return (
-    <Screen style={{ paddingHorizontal: 0 }}>
-      <View style={{ gap: space.md, paddingTop: space.lg, paddingBottom: space.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg }}>
-          <Text variant="title">Movimientos</Text>
-          <AddButton accessibilityLabel="Cargar movimiento" onPress={() => router.push('/movimiento')} />
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.sm }}>
-          <MonthArrow dir="back" onPress={() => shiftMonth(-1)} />
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.text }}>{monthName(month)}</Text>
-          <MonthArrow dir="forward" disabled={isCurrentMonth} onPress={() => shiftMonth(1)} />
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: space.sm, paddingHorizontal: space.lg }}>
-          <View style={{ flex: 1 }}>
-            <Select
-              label="Tipo"
-              value={txType}
-              options={[{ value: '', label: 'Todos' }, { value: 'EXPENSE', label: 'Gastos' }, { value: 'INCOME', label: 'Ingresos' }]}
-              onChange={(value) => { setTxType(value); setCategoryId(''); }}
-            />
+    <Screen
+      style={{ paddingHorizontal: 0 }}
+      header={
+        <View style={{ gap: space.md, paddingTop: space.lg, paddingBottom: space.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text variant="title">Movimientos</Text>
+            <AddButton accessibilityLabel="Cargar movimiento" onPress={() => router.push('/movimiento')} />
           </View>
-          <View style={{ flex: 1 }}>
-            <Select
-              label="Categoría"
-              value={categoryId}
-              options={[{ value: '', label: 'Todas' }, ...visibleCategories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name) }))]}
-              onChange={setCategoryId}
-            />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -space.md }}>
+            <MonthArrow dir="back" onPress={() => shiftMonth(-1)} />
+            <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.text }}>{monthName(month)}</Text>
+            <MonthArrow dir="forward" disabled={isCurrentMonth} onPress={() => shiftMonth(1)} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <View style={{ flex: 1 }}>
+              <Select
+                label="Tipo"
+                value={txType}
+                options={[{ value: '', label: 'Todos' }, { value: 'EXPENSE', label: 'Gastos' }, { value: 'INCOME', label: 'Ingresos' }]}
+                onChange={(value) => { setTxType(value); setCategoryId(''); }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Select
+                label="Categoría"
+                value={categoryId}
+                options={[{ value: '', label: 'Todas' }, ...visibleCategories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name) }))]}
+                onChange={setCategoryId}
+              />
+            </View>
           </View>
         </View>
-      </View>
-
-      {error && !items ? (
-        <Card style={{ marginHorizontal: space.lg, gap: space.md }}>
+      }>
+      {(topInset) => error && !items ? (
+        <Card style={{ marginHorizontal: space.lg, marginTop: topInset, gap: space.md }}>
           <Text style={{ color: colors.coral }}>{error}</Text>
           <Button title="Reintentar" kind="ghost" onPress={() => load(0)} />
         </Card>
       ) : !items ? (
-        <ActivityIndicator color={colors.green} style={{ marginTop: space.xl }} accessibilityLabel="Cargando movimientos" />
+        <ActivityIndicator color={colors.green} style={{ marginTop: topInset + space.xl }} accessibilityLabel="Cargando movimientos" />
       ) : (
         <FlatList
           showsVerticalScrollIndicator={false}
           data={items}
           keyExtractor={(t) => t.id}
-          contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: bottomInset, gap: space.sm, flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: space.lg, paddingTop: topInset, paddingBottom: bottomInset, gap: space.sm, flexGrow: 1 }}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           renderItem={({ item }) => <Row tx={item} />}
