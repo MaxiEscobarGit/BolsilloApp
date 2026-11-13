@@ -2,9 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   Text as RNText,
   ScrollView,
@@ -146,23 +144,21 @@ function Labeled({ label, error, children }: { label: string; error?: string; ch
   );
 }
 
-// Scrollable form that stays reachable with the keyboard open: KeyboardAvoidingView pads on iOS (Android
-// resizes the window), and the bottom padding keeps the save button above the keyboard and home indicator.
-// shortcut: no keyboardVerticalOffset, the form sheet is bottom-anchored so the view's own frame is enough;
-// add one if a device shows the last field still covered.
+// Scrollable form inside a native form sheet. iOS moves the sheet itself for the keyboard and the ScrollView
+// insets its content (automaticallyAdjustKeyboardInsets); a KeyboardAvoidingView on top compensated a second
+// time and left the sheet blank. Android resizes the window. Bottom padding keeps Guardar above the keyboard.
 export function FormScreen({ children }: { children: ReactNode }) {
-  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl + insets.bottom, gap: space.lg }}>
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl, gap: space.lg }}>
           {children}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   );
 }
