@@ -1,9 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { AmountField, Button, DateField, Field, FormScreen, Select, Text } from '@/components/ui';
+import { Segmented } from '@/components/deudas/shared';
+import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, lastCategory, txError, type Category, type Transaction } from '@/components/movimientos/shared';
+import { AmountField, AmountHero, Button, DateField, Disclosure, Field, FormScreen, Text, type Currency } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatAmount, parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
@@ -19,7 +20,7 @@ export default function MovimientoSheet() {
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(isoDate(new Date()));
-  const [currency, setCurrency] = useState('ARS');
+  const [currency, setCurrency] = useState<Currency>('ARS');
   const [rate, setRate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -35,19 +36,23 @@ export default function MovimientoSheet() {
         setCategoryId(t.categoryId);
         setDescription(t.description);
         setDate(t.transactionDate);
-        setCurrency(t.currency);
+        setCurrency(t.currency as Currency);
         if (t.currency !== 'ARS') setRate(formatAmount(String(t.exchangeRate).replace('.', ',')));
         setLoaded(true);
       })
       .catch((e) => setError(txError(e)));
   }, [id]);
 
+  // New movement: until a chip is tapped, the last category used for this type counts as picked.
+  const last = lastCategory[txType];
+  const picked = categoryId || (!id && last && categories.some((c) => c.id === last) ? last : '');
+
   // Inline validation (apple-design: validate inline, not only on submit), shown after the first try.
   const value = parseAmount(amount);
   const invalid = {
     amount: !(value > 0) && 'Ingresá un monto mayor a cero.',
     description: !description.trim() && 'Contá en qué fue.',
-    category: !categoryId && 'Elegí una categoría.',
+    category: !picked && 'Elegí una categoría.',
     rate: currency !== 'ARS' && rate !== '' && !(parseAmount(rate) > 0) && 'Cotización inválida.',
   };
 
@@ -59,7 +64,7 @@ export default function MovimientoSheet() {
     const body = {
       amount: value,
       type: txType,
-      categoryId,
+      categoryId: picked,
       description: description.trim(),
       transactionDate: date,
       currency,
@@ -67,6 +72,7 @@ export default function MovimientoSheet() {
     };
     try {
       await (id ? api.patch(`/api/transactions/${id}`, body) : api.post('/api/transactions', body));
+      lastCategory[txType] = picked;
       haptic.success();
       router.back();
     } catch (e) {
@@ -93,8 +99,25 @@ export default function MovimientoSheet() {
   const types = txType === 'DEBT' ? (['EXPENSE', 'INCOME', 'DEBT'] as const) : (['EXPENSE', 'INCOME'] as const);
   const typeLabel = { EXPENSE: 'Gasto', INCOME: 'Ingreso', DEBT: 'Deuda' };
 
+  const footer = loaded ? (
+    <>
+      {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
+      <Button title={id ? 'Guardar cambios' : 'Guardar'} loading={busy} onPress={save} />
+      {id ? (
+        <Pressable
+          onPress={remove}
+          disabled={busy}
+          accessibilityRole="button"
+          hitSlop={8}
+          style={({ pressed }) => ({ minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: busy ? 0.5 : pressed ? 0.7 : 1 })}>
+          <Text variant="small" style={{ color: colors.coral }}>Borrar movimiento</Text>
+        </Pressable>
+      ) : null}
+    </>
+  ) : undefined;
+
   return (
-    <FormScreen>
+    <FormScreen footer={footer}>
       {!loaded ? (
         error ? (
           <View style={{ padding: space.lg, gap: space.md }}>
@@ -108,37 +131,21 @@ export default function MovimientoSheet() {
         <>
           <Text variant="title">{id ? 'Editar movimiento' : 'Nuevo movimiento'}</Text>
 
-          <Select
-            label="Tipo"
-            value={txType}
+          <Segmented
             options={types.map((t) => ({ value: t, label: typeLabel[t] }))}
+            value={txType}
             onChange={(t) => { setTxType(t); setCategoryId(''); }}
           />
 
-          <AmountField
-            label={`Monto (${currency})`}
+          <AmountHero
+            label="Monto"
             value={amount}
             onChangeText={setAmount}
-            placeholder="0,00"
+            currency={currency}
+            onCurrency={setCurrency}
             autoFocus={!id}
             error={tried ? invalid.amount || undefined : undefined}
           />
-
-          <View style={{ gap: space.sm }}>
-            <Text variant="label">Moneda</Text>
-            <View style={{ flexDirection: 'row', gap: space.sm }}>
-              {['ARS', 'USD'].map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
-            </View>
-          </View>
-          {currency !== 'ARS' && (
-            <AmountField
-              label="Cotización (opcional)"
-              value={rate}
-              onChangeText={setRate}
-              placeholder="La del día, si no la cargás"
-              error={tried ? invalid.rate || undefined : undefined}
-            />
-          )}
 
           <Field
             label="Descripción"
@@ -152,20 +159,24 @@ export default function MovimientoSheet() {
             <Text variant="label">Categoría</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
               {categories.filter((c) => txType === 'DEBT' || c.type === txType).map((c) => (
-                <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+                <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={picked === c.id} onPress={() => setCategoryId(c.id)} />
               ))}
             </View>
             {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
           </View>
 
-          <DateField label="Fecha" value={date} onChange={setDate} />
-
-          {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
-
-          <Button title={id ? 'Guardar cambios' : 'Guardar'} loading={busy} onPress={save} />
-          {id ? (
-            <Button title="Borrar movimiento" kind="ghost" disabled={busy} onPress={remove} />
-          ) : null}
+          <Disclosure defaultOpen={!!id && (date !== isoDate(new Date()) || currency !== 'ARS')} reveal={currency !== 'ARS' && ((tried && !!invalid.rate) || !!error)}>
+            <DateField label="Fecha" value={date} onChange={setDate} />
+            {currency !== 'ARS' && (
+              <AmountField
+                label="Cotización (opcional)"
+                value={rate}
+                onChangeText={setRate}
+                placeholder="La del día, si no la cargás"
+                error={tried ? invalid.rate || undefined : undefined}
+              />
+            )}
+          </Disclosure>
         </>
       )}
     </FormScreen>
