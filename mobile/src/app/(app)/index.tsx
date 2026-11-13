@@ -32,6 +32,8 @@ export default function Inicio() {
     }
   }, []);
 
+  // load() only sets state after an await, so no render cascade; the rule can't see through the async call.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const expenses = summary?.byCategory.filter((c) => c.type === 'EXPENSE') ?? [];
