@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { dueInfo, deudasError, daysUntil, money, type Debt, type Purchase } from '@/components/deudas/shared';
-import { Card, Screen, Text } from '@/components/ui';
+import { Card, Screen, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { formatCents } from '@/lib/money';
@@ -21,6 +21,7 @@ type Summary = {
 };
 
 export default function Inicio() {
+  const bottomInset = useBottomBarInset();
   const { user } = useSession();
   const [summary, setSummary] = useState<Summary>();
   const [error, setError] = useState<string>();
@@ -58,7 +59,7 @@ export default function Inicio() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ gap: space.md, paddingVertical: space.lg }}
+        contentContainerStyle={{ gap: space.md, paddingTop: space.lg, paddingBottom: bottomInset }}
         refreshControl={
           <RefreshControl refreshing={refreshing} tintColor={colors.green} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />
         }>

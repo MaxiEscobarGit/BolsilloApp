@@ -19,7 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { formatDate, isoDate } from '@/lib/dates';
 import { formatAmount } from '@/lib/money';
-import { colors, fonts, motion, radius, space, type } from '@/theme';
+import { colors, fonts, motion, radius, size, space, type } from '@/theme';
 
 type Variant = keyof typeof type;
 
@@ -43,6 +43,12 @@ export function AddButton({ accessibilityLabel, onPress }: { accessibilityLabel:
       <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={24} tintColor={colors.onGreen} />
     </Pressable>
   );
+}
+
+// Space a tab screen's scroll content needs at the bottom so its last item clears the floating tab bar.
+export function useBottomBarInset() {
+  const { bottom } = useSafeAreaInsets();
+  return space.sm + size.tabBar + Math.max(bottom, space.md) + space.md;
 }
 
 // Full-screen canvas with the reference site's green glow bleeding from the top.

@@ -1,10 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 
 import { Bubble, Typing, type ChatData, type Msg } from '@/components/asistente/mensajes';
-import { Button, Screen, Text } from '@/components/ui';
+import { Button, Screen, Text, useBottomBarInset } from '@/components/ui';
 import { ApiError, api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { colors, radius, space, type } from '@/theme';
@@ -35,6 +35,14 @@ export default function Asistente() {
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState('');
   const list = useRef<FlatList<Msg>>(null);
+  // The input row sits above the floating tab bar; with the iOS keyboard open the bar is behind it, so the gap shrinks.
+  const barInset = useBottomBarInset();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const fetchPage = async (before?: string) => {
     const page = await api.get<HistoryItem[]>(`/api/chat/history?limit=${PAGE}` + (before ? `&before=${encodeURIComponent(before)}` : ''));
@@ -119,7 +127,7 @@ export default function Asistente() {
           />
         )}
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.xl, backgroundColor: colors.bg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: keyboardOpen && Platform.OS === 'ios' ? space.md : barInset, backgroundColor: colors.bg }}>
           <TextInput
             value={draft}
             onChangeText={setDraft}

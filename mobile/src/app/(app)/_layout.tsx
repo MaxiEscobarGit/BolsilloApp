@@ -3,7 +3,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, View, type PressableProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, space } from '@/theme';
+import { colors, radius, size, space } from '@/theme';
 
 type Icon = SymbolViewProps['name'];
 
@@ -15,9 +15,15 @@ export default function AppTabs() {
     <Tabs style={{ flex: 1, backgroundColor: colors.bg }}>
       <TabSlot style={{ flex: 1 }} />
       {/* Floating pill with the four tabs, and the assistant as a separate button pinned to the right.
-          Kept in the normal flow (not absolute) so screens never end up hidden under it. */}
+          Absolute over the slot so content scrolls behind it; box-none lets touches in the gaps reach that content.
+          Screens add useBottomBarInset() of bottom padding so their last item clears it. */}
       <TabList
+        pointerEvents="box-none"
         style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
           flexDirection: 'row',
           alignItems: 'center',
           marginHorizontal: space.md,
@@ -56,7 +62,7 @@ function Tab({ label, icon, edge, isFocused, ...props }: PressableProps & { isFo
         flex: 1,
         alignItems: 'center',
         gap: 4,
-        minHeight: 56,
+        minHeight: size.tabBar,
         justifyContent: 'center',
         backgroundColor: colors.surface,
         marginRight: edge === 'right' ? space.sm : 0,
@@ -77,9 +83,9 @@ function ChatButton({ isFocused, ...props }: PressableProps & { isFocused?: bool
       {({ pressed }) => (
         <View
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
+            width: size.tabBar,
+            height: size.tabBar,
+            borderRadius: size.tabBar / 2,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.green,

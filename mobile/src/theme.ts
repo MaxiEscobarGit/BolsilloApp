@@ -38,6 +38,8 @@ export const type = {
 } as const;
 
 export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
+// Height of the floating tab bar's pill and assistant button; the layout and useBottomBarInset share it.
+export const size = { tabBar: 56 } as const;
 // Apple-like rounding: generous radii that grow with the element (chips < cards < sheets).
 export const radius = { sm: 10, md: 20, lg: 28, pill: 999 } as const;
 
