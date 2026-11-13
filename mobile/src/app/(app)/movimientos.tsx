@@ -104,6 +104,7 @@ export default function Movimientos() {
         <ActivityIndicator color={colors.green} style={{ marginTop: space.xl }} accessibilityLabel="Cargando movimientos" />
       ) : (
         <FlatList
+          showsVerticalScrollIndicator={false}
           data={items}
           keyExtractor={(t) => t.id}
           contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: bottomInset, gap: space.sm, flexGrow: 1 }}

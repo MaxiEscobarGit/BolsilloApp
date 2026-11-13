@@ -59,6 +59,7 @@ export default function Inicio() {
   return (
     <Screen>
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ gap: space.md, paddingTop: space.lg, paddingBottom: bottomInset }}
         refreshControl={
           <RefreshControl refreshing={refreshing} tintColor={colors.green} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />

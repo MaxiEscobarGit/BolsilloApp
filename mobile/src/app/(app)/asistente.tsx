@@ -118,6 +118,7 @@ export default function Asistente() {
           </View>
         ) : (
           <FlatList
+            showsVerticalScrollIndicator={false}
             ref={list}
             inverted
             data={messages}
