@@ -66,7 +66,6 @@ function Tab({ label, icon, edge, isFocused, ...props }: PressableProps & { isFo
         borderBottomRightRadius: edge === 'right' ? radius.pill : 0,
       }}>
       <SymbolView name={icon} size={26} tintColor={color} />
-      {/* 9 pt Geist Mono (0.6 em advance) + 0.3 tracking: "MOVIMIENTOS" takes 63 pt of the 75 pt tab on a 375 pt phone. */}
     </Pressable>
   );
 }
