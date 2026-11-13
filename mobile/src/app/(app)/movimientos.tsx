@@ -1,10 +1,10 @@
 import { router, useFocusEffect } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
-import { categoryIcon, Chip, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { Button, Card, Screen, Text } from '@/components/ui';
+import { categoryIcon, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
+import { Button, Card, Screen, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { colors, fonts, radius, space } from '@/theme';
@@ -84,19 +84,24 @@ export default function Movimientos() {
           <MonthArrow dir="forward" disabled={isCurrentMonth} onPress={() => shiftMonth(1)} />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.lg }}>
-          {([['', 'Todos'], ['EXPENSE', 'Gastos'], ['INCOME', 'Ingresos']] as const).map(([value, label]) => (
-            <Chip key={value} label={label} selected={txType === value} onPress={() => { setTxType(value); setCategoryId(''); }} />
-          ))}
-        </ScrollView>
-        {visibleCategories.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.lg }}>
-            <Chip label="Todas" selected={!categoryId} onPress={() => setCategoryId('')} />
-            {visibleCategories.map((c) => (
-              <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
-            ))}
-          </ScrollView>
-        )}
+        <View style={{ flexDirection: 'row', gap: space.sm, paddingHorizontal: space.lg }}>
+          <View style={{ flex: 1 }}>
+            <Select
+              label="Tipo"
+              value={txType}
+              options={[{ value: '', label: 'Todos' }, { value: 'EXPENSE', label: 'Gastos' }, { value: 'INCOME', label: 'Ingresos' }]}
+              onChange={(value) => { setTxType(value); setCategoryId(''); }}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Select
+              label="Categoría"
+              value={categoryId}
+              options={[{ value: '', label: 'Todas' }, ...visibleCategories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name) }))]}
+              onChange={setCategoryId}
+            />
+          </View>
+        </View>
       </View>
 
       {error && !items ? (

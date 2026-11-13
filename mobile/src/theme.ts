@@ -14,6 +14,7 @@ export const colors = {
   greenDeep: '#06DEA7',
   onGreen: '#0A0C10',
   coral: '#FF6B50', // expenses, debts, errors
+  scrim: 'rgba(10, 12, 16, 0.6)', // behind sheets opened over a screen
 } as const;
 
 // Loaded in src/app/_layout.tsx with @expo-google-fonts.

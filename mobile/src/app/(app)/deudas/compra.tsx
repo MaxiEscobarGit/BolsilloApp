@@ -1,14 +1,14 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
-import { Segmented, SheetHeader, deudasError, isDate, money, parseAmount, today } from '@/components/deudas/shared';
+import { Segmented, SheetHeader, deudasError, isDate, money, today } from '@/components/deudas/shared';
 import { categoryIcon } from '@/components/movimientos/shared';
-import { Button, Field, Text } from '@/components/ui';
+import { AmountField, Button, Field, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
-import { colors, radius, space } from '@/theme';
+import { parseAmount } from '@/lib/money';
+import { colors, space } from '@/theme';
 
 // Copied from api/.../categories/dto/CategoryResponse (fields we read).
 type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME' };
@@ -35,10 +35,10 @@ export default function NuevaCompra() {
   const value = parseAmount(amount);
   const n = Number(installments);
   const nValid = Number.isInteger(n) && n >= 1 && n <= 60;
-  const amountError = amount && Number.isNaN(value) ? 'Poné un monto mayor a cero.' : undefined;
+  const amountError = amount && !(value > 0) ? 'Poné un monto mayor a cero.' : undefined;
   const nError = installments && !nValid ? 'Entre 1 y 60.' : undefined;
   const dateError = !isDate(date) ? 'Usá el formato AAAA-MM-DD.' : undefined;
-  const valid = description.trim() && !Number.isNaN(value) && nValid && !dateError && categoryId;
+  const valid = description.trim() && value > 0 && nValid && !dateError && categoryId;
 
   const save = async () => {
     setSaving(true);
@@ -67,7 +67,7 @@ export default function NuevaCompra() {
       <Field label="¿Qué compraste?" value={description} onChangeText={setDescription} placeholder="Ej: heladera" autoFocus />
       <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
-          <Field label="Monto total" value={amount} onChangeText={setAmount} placeholder="0" keyboardType="decimal-pad" error={amountError} />
+          <AmountField label="Monto total" value={amount} onChangeText={setAmount} placeholder="0" error={amountError} />
         </View>
         <View style={{ width: 132, gap: space.sm }}>
           <Text variant="label">Moneda</Text>
@@ -82,43 +82,23 @@ export default function NuevaCompra() {
           <Field label="Fecha" value={date} onChangeText={setDate} placeholder="AAAA-MM-DD" error={dateError} autoCapitalize="none" />
         </View>
       </View>
-      {!Number.isNaN(value) && nValid ? (
+      {value > 0 && nValid ? (
         <Text variant="small" style={{ color: colors.textMuted }}>
           {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor((value * 100) / n), currency)}
         </Text>
       ) : null}
 
-      <View style={{ gap: space.sm }}>
-        <Text variant="label">Categoría</Text>
-        {!categories ? (
-          <ActivityIndicator color={colors.green} accessibilityLabel="Cargando categorías" />
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
-            {categories.map((c) => {
-              const active = c.id === categoryId;
-              return (
-                <Pressable
-                  key={c.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
-                  onPress={() => { Haptics.selectionAsync(); setCategoryId(c.id); }}
-                  style={{
-                    minHeight: 44,
-                    paddingHorizontal: space.md,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: space.xs,
-                    borderRadius: radius.pill,
-                    backgroundColor: active ? colors.surfaceHigh : colors.surface,
-                  }}>
-                  <SymbolView name={categoryIcon(c.name)} size={16} tintColor={active ? colors.green : colors.text} />
-                  <Text variant="small" style={{ color: active ? colors.green : colors.text }}>{c.name}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
+      {!categories ? (
+        <ActivityIndicator color={colors.green} accessibilityLabel="Cargando categorías" />
+      ) : (
+        <Select
+          label="Categoría"
+          value={categoryId}
+          placeholder="Elegí una categoría"
+          options={categories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name) }))}
+          onChange={setCategoryId}
+        />
+      )}
 
       {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
       <Button title="Guardar compra" onPress={save} loading={saving} disabled={!valid} />

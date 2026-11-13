@@ -1,7 +1,11 @@
+import * as Haptics from 'expo-haptics';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
 import {
+  Modal,
   Pressable,
   Text as RNText,
+  ScrollView,
   TextInput,
   View,
   type PressableProps,
@@ -10,9 +14,10 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import Animated, { cubicBezier } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { cubicBezier, FadeIn, SlideInDown, useReducedMotion } from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { formatAmount } from '@/lib/money';
 import { colors, fonts, motion, radius, space, type } from '@/theme';
 
 type Variant = keyof typeof type;
@@ -121,6 +126,129 @@ export function Field({ label, error, ...props }: TextInputProps & { label: stri
         ]}
       />
       {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+    </View>
+  );
+}
+
+// Money input shown as es-AR while typing ("12000" → "12.000", "12000,5" → "12.000,5"); read it with parseAmount.
+// shortcut: the whole string is reformatted on every change, so the cursor lands at the end; fine when
+// typing left to right, revisit if people need to edit the middle of a number.
+export function AmountField({
+  value,
+  onChangeText,
+  ...props
+}: Omit<TextInputProps, 'value' | 'onChangeText'> & { label: string; error?: string; value: string; onChangeText: (text: string) => void }) {
+  return (
+    <Field
+      {...props}
+      value={value}
+      onChangeText={(text) => onChangeText(formatAmount(text, value))}
+      keyboardType="decimal-pad"
+      inputMode="decimal"
+    />
+  );
+}
+
+export type SelectOption<T extends string> = { value: T; label: string; icon?: SymbolViewProps['name'] };
+
+// Dropdown: a field-shaped trigger that opens a bottom sheet with the options. Opened a few times a day
+// (animate-expo: occasional tier), so the sheet gets a short fade + slide; none under reduced motion.
+export function Select<T extends string>({
+  label,
+  value,
+  options,
+  placeholder = 'Elegí una opción',
+  onChange,
+  error,
+}: {
+  label: string;
+  value?: T;
+  options: SelectOption<T>[];
+  placeholder?: string;
+  onChange: (value: T) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const reduced = useReducedMotion();
+  const insets = useSafeAreaInsets();
+  const current = options.find((o) => o.value === value);
+  const close = () => setOpen(false);
+  const pick = (v: T) => {
+    Haptics.selectionAsync().catch(() => {});
+    close();
+    onChange(v);
+  };
+  return (
+    <View style={{ gap: space.sm }}>
+      <Text variant="label">{label}</Text>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityValue={{ text: current?.label ?? placeholder }}
+        style={({ pressed }) => ({
+          minHeight: 52,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space.sm,
+          paddingHorizontal: space.md,
+          borderRadius: radius.md,
+          backgroundColor: pressed ? colors.surfaceHigh : colors.surface,
+          borderWidth: error ? 1 : 0,
+          borderColor: colors.coral,
+        })}>
+        {current?.icon && <SymbolView name={current.icon} size={18} tintColor={colors.text} />}
+        <Text numberOfLines={1} style={{ flex: 1, color: current ? colors.text : colors.textFaint }}>
+          {current?.label ?? placeholder}
+        </Text>
+        <SymbolView name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }} size={18} tintColor={colors.textMuted} />
+      </Pressable>
+      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+
+      <Modal visible={open} transparent statusBarTranslucent animationType="none" onRequestClose={close}>
+        <Animated.View
+          entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)}
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim }}>
+          <Pressable style={{ flex: 1 }} onPress={close} accessibilityRole="button" accessibilityLabel="Cerrar" />
+          <Animated.View
+            entering={reduced ? undefined : SlideInDown.duration(motion.springSheet.duration).easing(motion.easeOut)}
+            style={{
+              maxHeight: '70%',
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: radius.lg,
+              borderTopRightRadius: radius.lg,
+              paddingTop: space.md,
+              paddingBottom: insets.bottom + space.md,
+            }}>
+            <Text variant="label" style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>{label}</Text>
+            <ScrollView accessibilityRole="radiogroup">
+              {options.map((o) => {
+                const selected = o.value === value;
+                const color = selected ? colors.green : colors.text;
+                return (
+                  <Pressable
+                    key={o.value}
+                    onPress={() => pick(o.value)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    style={({ pressed }) => ({
+                      minHeight: 48,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: space.md,
+                      paddingHorizontal: space.lg,
+                      backgroundColor: pressed ? colors.surfaceHigh : 'transparent',
+                    })}>
+                    {o.icon && <SymbolView name={o.icon} size={18} tintColor={color} />}
+                    <Text style={{ flex: 1, color, fontFamily: selected ? fonts.medium : fonts.regular }}>{o.label}</Text>
+                    {selected && <SymbolView name={{ ios: 'checkmark', android: 'check', web: 'check' }} size={18} tintColor={colors.green} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
     </View>
   );
 }
