@@ -18,6 +18,7 @@ import Animated, { cubicBezier, FadeIn, SlideInDown, useReducedMotion } from 're
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDate, isoDate } from '@/lib/dates';
+import { GlassFill, useGlass } from '@/lib/glass';
 import { formatAmount } from '@/lib/money';
 import { colors, fonts, motion, radius, size, space, type } from '@/theme';
 
@@ -29,7 +30,9 @@ export function Text({ variant = 'body', style, ...props }: TextProps & { varian
 }
 
 // Round "+" for screen headers (Movimientos, Deudas y cuotas): same size and press feedback everywhere.
+// On iOS it is a green-tinted glass disc (floating control over content); elsewhere solid green.
 export function AddButton({ accessibilityLabel, onPress }: { accessibilityLabel: string; onPress: () => void }) {
+  const glass = useGlass();
   return (
     <Pressable
       onPress={onPress}
@@ -38,8 +41,9 @@ export function AddButton({ accessibilityLabel, onPress }: { accessibilityLabel:
       hitSlop={8}
       style={({ pressed }) => ({
         width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-        backgroundColor: colors.green, transform: [{ scale: pressed ? 0.94 : 1 }],
+        backgroundColor: glass === 'none' ? colors.green : 'transparent', overflow: 'hidden', transform: [{ scale: pressed ? 0.94 : 1 }],
       })}>
+      <GlassFill kind={glass} tint={colors.green} />
       <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={24} tintColor={colors.onGreen} />
     </Pressable>
   );
@@ -212,6 +216,7 @@ export type SelectOption<T extends string> = { value: T; label: string; icon?: S
 function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () => void; label: string; children: ReactNode }) {
   const reduced = useReducedMotion();
   const insets = useSafeAreaInsets();
+  const glass = useGlass();
   return (
     <Modal visible={open} transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
       <Animated.View
@@ -222,13 +227,16 @@ function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () 
           entering={reduced ? undefined : SlideInDown.duration(motion.springSheet.duration).easing(motion.easeOut)}
           style={{
             maxHeight: '80%',
-            backgroundColor: colors.surface,
+            backgroundColor: glass === 'none' ? colors.surface : 'transparent',
+            overflow: 'hidden',
             borderTopLeftRadius: radius.lg,
             borderTopRightRadius: radius.lg,
             paddingTop: space.md,
             paddingBottom: insets.bottom + space.md,
           }}>
-          <Text variant="label" style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>{label}</Text>
+          <GlassFill kind={glass} />
+          {/* Over the material the muted label loses legibility (§12 vibrancy). */}
+          <Text variant="label" style={{ paddingHorizontal: space.lg, paddingBottom: space.sm, color: glass === 'none' ? colors.textMuted : colors.text }}>{label}</Text>
           {children}
         </Animated.View>
       </Animated.View>

@@ -16,6 +16,8 @@ export const colors = {
   coral: '#FF6B50', // expenses, debts, errors
   scrim: 'rgba(10, 12, 16, 0.6)', // behind sheets opened over a screen
   barFill: 'rgba(10, 12, 16, 0.88)', // floating tab pill: bg at 88%, so cards scrolling behind only hint through
+  barSelect: 'rgba(244, 246, 245, 0.12)', // selection capsule behind the active tab (solid and blur pills)
+  barSelectGlass: 'rgba(244, 246, 245, 0.22)', // same capsule as a Liquid Glass tint: a slightly lighter glass
 } as const;
 
 // Loaded in src/app/_layout.tsx with @expo-google-fonts.
