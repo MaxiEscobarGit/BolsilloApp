@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { AmountField, Button, Field, Select, Text } from '@/components/ui';
+import { AmountField, Button, DateField, Field, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatAmount, parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
@@ -49,7 +49,6 @@ export default function MovimientoSheet() {
     amount: !(value > 0) && 'Ingresá un monto mayor a cero.',
     description: !description.trim() && 'Contá en qué fue.',
     category: !categoryId && 'Elegí una categoría.',
-    date: !/^\d{4}-\d{2}-\d{2}$/.test(date) && 'Usá el formato AAAA-MM-DD.',
     rate: currency !== 'ARS' && rate !== '' && !(parseAmount(rate) > 0) && 'Cotización inválida.',
   };
 
@@ -165,14 +164,7 @@ export default function MovimientoSheet() {
               {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
             </View>
 
-            <Field
-              label="Fecha"
-              value={date}
-              onChangeText={setDate}
-              placeholder="AAAA-MM-DD"
-              autoCapitalize="none"
-              error={tried ? invalid.date || undefined : undefined}
-            />
+            <DateField label="Fecha" value={date} onChange={setDate} />
 
             {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
 

@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { deudasError, isDate } from '@/components/deudas/shared';
+import { deudasError } from '@/components/deudas/shared';
 import { Chip, haptic } from '@/components/movimientos/shared';
-import { AmountField, Button, Field, Select, Text } from '@/components/ui';
+import { AmountField, Button, DateField, Field, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
@@ -27,7 +27,6 @@ export default function NuevaDeuda() {
   const invalid = {
     name: !name.trim() && 'Poné un nombre.',
     amount: !(value > 0) && 'Ingresá un monto mayor a cero.',
-    dueDate: dueDate !== '' && !isDate(dueDate) && 'Usá el formato AAAA-MM-DD.',
   };
 
   const save = async () => {
@@ -97,14 +96,7 @@ export default function NuevaDeuda() {
 
           <Field label="Descripción (opcional)" value={description} onChangeText={setDescription} placeholder="Ej: la cena del viernes" />
 
-          <Field
-            label="Vence (opcional)"
-            value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="AAAA-MM-DD"
-            autoCapitalize="none"
-            error={tried ? invalid.dueDate || undefined : undefined}
-          />
+          <DateField label="Vence (opcional)" value={dueDate} onChange={setDueDate} placeholder="Sin fecha" optional />
 
           {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
 

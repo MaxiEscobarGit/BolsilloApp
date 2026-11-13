@@ -48,9 +48,7 @@ const categoryIcons: Record<string, Icon> = {
 };
 export const categoryIcon = (name: string): Icon => categoryIcons[name] ?? sym('tag', 'sell');
 
-// Local date as YYYY-MM-DD (toISOString would shift to UTC and change the day at night).
-export const isoDate = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export { isoDate } from '@/lib/dates';
 
 export const formatMoney = (cents: number, currency: string) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(cents / 100);
