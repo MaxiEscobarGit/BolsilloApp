@@ -15,6 +15,7 @@ export const colors = {
   onGreen: '#0A0C10',
   coral: '#FF6B50', // expenses, debts, errors
   scrim: 'rgba(10, 12, 16, 0.6)', // behind sheets opened over a screen
+  barFill: 'rgba(10, 12, 16, 0.88)', // floating tab pill: bg at 88%, so cards scrolling behind only hint through
 } as const;
 
 // Loaded in src/app/_layout.tsx with @expo-google-fonts.
