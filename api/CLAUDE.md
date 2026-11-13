@@ -48,8 +48,10 @@ bolsilloApp.api/
 │   ├── AuthService
 │   ├── AuthRepository            (JpaRepository<User, UUID>)
 │   ├── RefreshTokenRepository
+│   ├── AuthThrottleService       ← límite de logins fallidos (email+IP) y registros (IP), en auth_attempts
+│   ├── AuthAttemptRepository
 │   ├── dto/     (LoginRequest, RegisterRequest, AuthResponse)
-│   └── model/   (User, RefreshToken)
+│   └── model/   (User, RefreshToken, AuthAttempt)
 ├── categories/
 │   ├── CategoryController
 │   ├── CategoryService
@@ -239,6 +241,9 @@ El usuario se obtiene con `@AuthenticationPrincipal User currentUser`.
 - Sin JWT válido la respuesta es 401 JSON (via `AuthenticationEntryPoint` en `SecurityConfig`).
 - Rate limiting de mensajes AI por usuario: campo `ai_messages_used` en `users`,
   resetea mensualmente con `ai_messages_reset_at`.
+- Throttling de auth en la tabla `auth_attempts` (`AuthThrottleService`): login fallido por
+  email+IP (`app.security.login.*`, 5 en 15 min) y registros por IP (`app.security.register.*`,
+  5 por hora). Respuesta 429 con `Retry-After`.
 
 ### Manejo de errores
 
@@ -313,12 +318,14 @@ Nomenclatura: `V{n}__{descripcion_snake_case}.sql`. Nunca editar una migración 
 | V4      | — (estaba reservada para chat, no se usó)       | saltada, no reutilizar |
 | V5      | `V5__add_exchange_rates_lookup_index.sql`       | en `main`             |
 | V6      | — (estaba reservada para seguridad, no se usó)  | saltada, no reutilizar |
-| V7      | —                                               | **próxima libre**     |
+| V7      | `V7__auth_throttle.sql` (tabla `auth_attempts`) | rama `claude/seguridad-throttling` |
+| V8      | —                                               | **próxima libre**     |
 
 ### Tablas MVP
 
 - `users` — incluye `ai_messages_used`, `ai_messages_reset_at`, `preferred_exchange_source`
 - `refresh_tokens`
+- `auth_attempts` — intentos de auth para throttling (`kind` `LOGIN` | `REGISTER`, `throttle_key`, `attempted_at`)
 - `categories` — sistema (`user_id` NULL) y custom (`user_id` con valor)
 - `exchange_rates` — tipo de cambio histórico, nunca se recalcula
 - `transactions` — montos en centavos, guarda original + convertido a ARS
@@ -401,7 +408,8 @@ Cuando varios agentes (o personas) trabajan a la vez sobre el backend:
    - `V4` y `V6` → reservadas y no usadas; no reutilizarlas, porque Flyway rechaza
      una versión menor que una ya aplicada
    - `V5` → tipo de cambio (en `main`)
-   - siguiente libre: `V7` (reservarla acá antes de usarla)
+   - `V7` → seguridad, tabla `auth_attempts` (rama `claude/seguridad-throttling`)
+   - siguiente libre: `V8` (reservarla acá antes de usarla)
    Si un agente necesita más de una migración, reserva un número nuevo; nunca reutiliza
    ni renumera una ya mergeada.
 3. **Bloques propios en `application.properties`.** Cada módulo agrega sus properties en

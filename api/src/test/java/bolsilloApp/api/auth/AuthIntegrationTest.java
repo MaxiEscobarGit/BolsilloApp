@@ -6,6 +6,7 @@ import bolsilloApp.api.auth.dto.RegisterRequest;
 import bolsilloApp.api.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.core.type.TypeReference;
 
 import java.util.Map;
@@ -13,6 +14,8 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class AuthIntegrationTest extends AbstractIntegrationTest {
@@ -248,5 +251,29 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/transactions")
                         .header("Authorization", "Bearer " + fakeJwt))
                 .andExpect(status().isUnauthorized());
+    }
+
+    private ResultActions registerFrom(String ip, String email) throws Exception {
+        return mockMvc.perform(post("/api/auth/register")
+                .with(request -> { request.setRemoteAddr(ip); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(new RegisterRequest(email, "password123", "User", null))));
+    }
+
+    @Test
+    void elRegistroSeLimitaPorIp() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            registerFrom("10.0.0.9", "u" + i + "@test.com").andExpect(status().isCreated());
+        }
+
+        registerFrom("10.0.0.9", "u5@test.com")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.code").value("TOO_MANY_REGISTRATIONS"))
+                .andExpect(jsonPath("$.status").value(429));
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM users", Integer.class)).isEqualTo(5);
+
+        // Otra IP no esta afectada
+        registerFrom("10.0.0.10", "u5@test.com").andExpect(status().isCreated());
     }
 }
