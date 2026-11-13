@@ -7,6 +7,7 @@ import { Bubble, Typing, type ChatData, type Msg } from '@/components/asistente/
 import { Button, Screen, Text, useBottomBarInset } from '@/components/ui';
 import { ApiError, api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
+import { GlassFill, useGlass } from '@/lib/glass';
 import { colors, radius, space, type } from '@/theme';
 
 // Mirrors api/.../chat/dto/ChatHistoryResponse.java and ChatResponse.java (only the fields read here).
@@ -38,6 +39,12 @@ export default function Asistente() {
   // The input row sits above the floating tab bar; with the iOS keyboard open the bar is behind it, so the gap shrinks.
   const barInset = useBottomBarInset();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  // On iOS the input row is a glass slab floating over the messages: it overlaps the list (negative margin) and the
+  // list pads by the row's measured height so the newest message clears it. Elsewhere it stays a solid row below the list.
+  const glass = useGlass();
+  const [rowH, setRowH] = useState(0);
+  const under = glass === 'none' ? 0 : rowH;
+  const rowPad = keyboardOpen && Platform.OS === 'ios' ? space.md : barInset;
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardOpen(false));
@@ -105,7 +112,7 @@ export default function Asistente() {
         {loading ? (
           <ActivityIndicator color={colors.green} style={{ flex: 1 }} />
         ) : messages.length === 0 && !sending ? (
-          <View style={{ flex: 1, justifyContent: 'flex-end', padding: space.lg, gap: space.sm }}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', padding: space.lg, paddingBottom: space.lg + under, gap: space.sm }}>
             <Text variant="label" style={{ marginBottom: space.xs }}>Probá con</Text>
             {SUGGESTIONS.map((s) => <Button key={s} kind="ghost" title={s} onPress={() => send(s)} />)}
           </View>
@@ -116,7 +123,8 @@ export default function Asistente() {
             data={messages}
             keyExtractor={(m) => m.id}
             renderItem={({ item }) => <Bubble msg={item} />}
-            contentContainerStyle={{ padding: space.lg, gap: space.md }}
+            // Inverted: the list is flipped, so paddingTop ends up at the visual bottom.
+            contentContainerStyle={{ padding: space.lg, paddingTop: space.lg + under, gap: space.md }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             onEndReached={loadOlder}
@@ -127,7 +135,11 @@ export default function Asistente() {
           />
         )}
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: keyboardOpen && Platform.OS === 'ios' ? space.md : barInset, backgroundColor: colors.bg }}>
+        <View
+          onLayout={(e) => setRowH(e.nativeEvent.layout.height)}
+          style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: rowPad, marginTop: -under, backgroundColor: glass === 'none' ? colors.bg : 'transparent' }}>
+          {/* Ends just above the tab pill (no glass over glass); reaches the bottom edge with the keyboard open. */}
+          <GlassFill kind={glass} style={{ left: space.sm, right: space.sm, bottom: keyboardOpen ? 0 : rowPad - space.sm, borderRadius: radius.lg, overflow: 'hidden' }} />
           <TextInput
             value={draft}
             onChangeText={setDraft}
