@@ -22,11 +22,14 @@ export function useGlass(): GlassKind {
 // Material that fills its parent (or the box given in `style`). Only for floating controls over content, never content itself.
 export function GlassFill({ kind, tint, style }: { kind: GlassKind; tint?: ColorValue; style?: StyleProp<ViewStyle> }) {
   if (kind === 'none') return null;
+  // A caller that gives its own box (a height) anchors it with top/bottom itself; absoluteFill would add top: 0,
+  // and with top + height set the bottom is ignored (the bar's pill ended up at the top of the screen).
+  const base = StyleSheet.flatten(style)?.height !== undefined ? { position: 'absolute' as const } : StyleSheet.absoluteFill;
   if (kind === 'liquid') {
-    return <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor={tint} style={[StyleSheet.absoluteFill, style]} />;
+    return <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor={tint} style={[base, style]} />;
   }
   return (
-    <BlurView tint="systemChromeMaterialDark" intensity={70} style={[StyleSheet.absoluteFill, style]}>
+    <BlurView tint="systemChromeMaterialDark" intensity={70} style={[base, style]}>
       {tint ? <View style={{ flex: 1, backgroundColor: tint, opacity: 0.35 }} /> : null}
     </BlurView>
   );
