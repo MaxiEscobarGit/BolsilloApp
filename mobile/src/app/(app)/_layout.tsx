@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { GlassContainer, GlassView } from 'expo-glass-effect';
+import { GlassContainer } from 'expo-glass-effect';
 import { usePathname } from 'expo-router';
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
@@ -26,6 +26,7 @@ export default function AppTabs() {
           Absolute over the slot so content scrolls behind it; box-none lets touches in the gaps reach that content.
           Screens add useBottomBarInset() of bottom padding so their last item clears it. */}
       <BarBackground glass={glass} bottom={bottom} />
+      <Capsule bottom={bottom} />
       <TabList
         pointerEvents="box-none"
         style={{
@@ -70,8 +71,8 @@ function tabIndex(pathname: string) {
   return -1;
 }
 
-// Everything drawn behind the TabList: the pill, the assistant disc and the selection capsule. Absolute over the slot.
-// Liquid Glass merges only direct GlassView children of the container, so pill, disc and capsule are all direct children.
+// Everything drawn behind the TabList: the pill and the assistant disc. Absolute over the slot.
+// Liquid Glass merges only direct GlassView children of the container, so both are direct children.
 // Without glass (Android, web, Reduce Transparency) the same shapes are solid.
 function BarBackground({ glass, bottom }: { glass: GlassKind; bottom: number }) {
   const pill = { position: 'absolute', left: space.md, right: space.md + size.tabBar + space.sm, bottom, height: size.tabBar, borderRadius: radius.pill } as const;
@@ -89,7 +90,6 @@ function BarBackground({ glass, bottom }: { glass: GlassKind; bottom: number }) 
           <GlassFill kind={glass} tint={colors.green} style={disc} />
         </>
       )}
-      <Capsule glass={glass} bottom={bottom} />
     </>
   );
   return glass === 'liquid' ? (
@@ -99,10 +99,10 @@ function BarBackground({ glass, bottom }: { glass: GlassKind; bottom: number }) 
   );
 }
 
-const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
-
-// Oval behind the active tab. Springs to the tapped tab (default settle, no bounce: no finger momentum), fades out on the assistant.
-function Capsule({ glass, bottom }: { glass: GlassKind; bottom: number }) {
+// Light oval over the pill, under the icons, marking the active tab (like the iOS 26 tab bar). Drawn outside the glass
+// container on purpose: inside it Liquid Glass would merge it with the pill and it reads as a bulge, not a highlight.
+// Springs to the tapped tab (default settle, no bounce: no finger momentum), fades out on the assistant.
+function Capsule({ bottom }: { bottom: number }) {
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
   const index = tabIndex(usePathname());
@@ -116,11 +116,7 @@ function Capsule({ glass, bottom }: { glass: GlassKind; bottom: number }) {
   }, [index, tab, reduced, x, opacity]);
   const animated = useAnimatedStyle(() => ({ opacity: opacity.get(), transform: [{ translateX: x.get() }] }));
   const box = { position: 'absolute', left: space.md, bottom: bottom + space.xs, width: tab, height: size.tabBar - 2 * space.xs, borderRadius: radius.pill } as const;
-  return glass === 'liquid' ? (
-    <AnimatedGlassView glassEffectStyle="regular" colorScheme="dark" tintColor={colors.barSelectGlass} style={[box, animated]} />
-  ) : (
-    <Animated.View style={[box, { backgroundColor: colors.barSelect }, animated]} />
-  );
+  return <Animated.View pointerEvents="none" style={[box, { backgroundColor: colors.barSelect }, animated]} />;
 }
 
 function Tab({ label, icon, last, isFocused, onPress, ...props }: PressableProps & { isFocused?: boolean; label: string; icon: Icon; last?: boolean }) {
