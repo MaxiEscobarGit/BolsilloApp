@@ -16,7 +16,7 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import Animated, { cubicBezier, FadeIn, SlideInDown, useReducedMotion } from 'react-native-reanimated';
+import Animated, { cubicBezier, FadeIn, FadeOut, LinearTransition, SlideInDown, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDate, isoDate } from '@/lib/dates';
@@ -179,8 +179,9 @@ function Labeled({ label, error, children }: { label: string; error?: string; ch
 
 // Scrollable form inside a native form sheet. iOS moves the sheet itself for the keyboard and the ScrollView
 // insets its content (automaticallyAdjustKeyboardInsets); a KeyboardAvoidingView on top compensated a second
-// time and left the sheet blank. Android resizes the window. Bottom padding keeps Guardar above the keyboard.
-export function FormScreen({ children }: { children: ReactNode }) {
+// time and left the sheet blank. Android resizes the window. `footer` (the save button) sits outside the
+// ScrollView so it is always visible; the SafeAreaView gives it the bottom inset as padding.
+export function FormScreen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
@@ -189,11 +190,46 @@ export function FormScreen({ children }: { children: ReactNode }) {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl, gap: space.lg }}>
+          contentContainerStyle={{ padding: space.lg, paddingBottom: footer ? space.md : space.xxl, gap: space.lg }}>
           {children}
         </ScrollView>
+        {footer ? <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm, gap: space.xs }}>{footer}</View> : null}
       </SafeAreaView>
     </View>
+  );
+}
+
+// "Más opciones": hides the secondary fields of a form behind one row. Grows with a short layout
+// transition and fades its content; neither under reduced motion. `reveal` forces it open (a hidden field has an error).
+export function Disclosure({ label = 'Más opciones', defaultOpen, reveal, children }: { label?: string; defaultOpen?: boolean; reveal?: boolean; children: ReactNode }) {
+  const reduced = useReducedMotion();
+  const [open, setOpen] = useState(!!defaultOpen);
+  const shown = open || !!reveal;
+  return (
+    <Animated.View layout={reduced ? undefined : LinearTransition.duration(motion.springSheet.duration).easing(motion.easeOut)} style={{ gap: space.md }}>
+      <Pressable
+        onPress={() => { Haptics.selectionAsync().catch(() => {}); setOpen(!shown); }}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ expanded: shown }}
+        hitSlop={8}
+        style={({ pressed }) => ({ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.xs, opacity: pressed ? 0.7 : 1 })}>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.medium }}>{label}</Text>
+        <SymbolView
+          name={shown ? { ios: 'chevron.up', android: 'expand_less', web: 'expand_less' } : { ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }}
+          size={16}
+          tintColor={colors.textMuted}
+        />
+      </Pressable>
+      {shown ? (
+        <Animated.View
+          entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)}
+          exiting={reduced ? undefined : FadeOut.duration(100)}
+          style={{ gap: space.lg }}>
+          {children}
+        </Animated.View>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -233,6 +269,60 @@ export function AmountField({
   );
 }
 
+export type Currency = 'ARS' | 'USD';
+const currencyOptions: SelectOption<Currency>[] = [{ value: 'ARS', label: 'Peso argentino (ARS)' }, { value: 'USD', label: 'Dólar (USD)' }];
+
+// The protagonist of a form: the amount as a big number (display type) with the currency as a small tappable
+// suffix ("ARS ▾") that opens a sheet. Same es-AR formatting as AmountField; read it with parseAmount.
+export function AmountHero({
+  label,
+  value,
+  onChangeText,
+  currency,
+  onCurrency,
+  error,
+  ...props
+}: Omit<TextInputProps, 'value' | 'onChangeText'> & { label: string; error?: string; value: string; onChangeText: (text: string) => void; currency: Currency; onCurrency: (c: Currency) => void }) {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  return (
+    <>
+      <Labeled label={label} error={error}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <TextInput
+            placeholder="0"
+            placeholderTextColor={colors.textFaint}
+            selectionColor={colors.green}
+            accessibilityLabel={label}
+            {...props}
+            value={value}
+            onChangeText={(text) => onChangeText(formatAmount(text, value))}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+            style={[type.display, { flex: 1, minHeight: 56, paddingVertical: 0, color: error ? colors.coral : colors.text }]}
+          />
+          <Pressable
+            onPress={() => setOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Moneda"
+            accessibilityValue={{ text: currency }}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: space.xs, paddingHorizontal: space.md,
+              borderRadius: radius.pill, backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1,
+            })}>
+            <Text variant="small" style={{ fontFamily: fonts.semibold, color: colors.textMuted }}>{currency}</Text>
+            <SymbolView name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }} size={14} tintColor={colors.textMuted} />
+          </Pressable>
+        </View>
+      </Labeled>
+      <Sheet open={open} onClose={close} label="Moneda">
+        <Options options={currencyOptions} value={currency} onPick={(c) => { Haptics.selectionAsync().catch(() => {}); close(); onCurrency(c); }} />
+      </Sheet>
+    </>
+  );
+}
+
 export type SelectOption<T extends string> = { value: T; label: string; icon?: SymbolViewProps['name'] };
 
 // Bottom sheet shared by Select and DateField. Opened a few times a day (animate-expo: occasional tier),
@@ -265,6 +355,37 @@ function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () 
         </Animated.View>
       </Animated.View>
     </Modal>
+  );
+}
+
+// Radio list of a Select (and of the currency sheet).
+function Options<T extends string>({ options, value, onPick }: { options: SelectOption<T>[]; value?: T; onPick: (value: T) => void }) {
+  return (
+    <ScrollView accessibilityRole="radiogroup" showsVerticalScrollIndicator={false}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        const color = selected ? colors.green : colors.text;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onPick(o.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            style={({ pressed }) => ({
+              minHeight: 48,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: space.md,
+              paddingHorizontal: space.lg,
+              backgroundColor: pressed ? colors.surfaceHigh : 'transparent',
+            })}>
+            {o.icon && <SymbolView name={o.icon} size={18} tintColor={color} />}
+            <Text style={{ flex: 1, color, fontFamily: selected ? fonts.medium : fonts.regular }}>{o.label}</Text>
+            {selected && <SymbolView name={{ ios: 'checkmark', android: 'check', web: 'check' }} size={18} tintColor={colors.green} />}
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }
 
@@ -310,31 +431,7 @@ export function Select<T extends string>({
       </Labeled>
 
       <Sheet open={open} onClose={close} label={label}>
-        <ScrollView accessibilityRole="radiogroup" showsVerticalScrollIndicator={false}>
-          {options.map((o) => {
-            const selected = o.value === value;
-            const color = selected ? colors.green : colors.text;
-            return (
-              <Pressable
-                key={o.value}
-                onPress={() => pick(o.value)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                style={({ pressed }) => ({
-                  minHeight: 48,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: space.md,
-                  paddingHorizontal: space.lg,
-                  backgroundColor: pressed ? colors.surfaceHigh : 'transparent',
-                })}>
-                {o.icon && <SymbolView name={o.icon} size={18} tintColor={color} />}
-                <Text style={{ flex: 1, color, fontFamily: selected ? fonts.medium : fonts.regular }}>{o.label}</Text>
-                {selected && <SymbolView name={{ ios: 'checkmark', android: 'check', web: 'check' }} size={18} tintColor={colors.green} />}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <Options options={options} value={value} onPick={pick} />
       </Sheet>
     </>
   );

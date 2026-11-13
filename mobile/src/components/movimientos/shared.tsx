@@ -50,6 +50,10 @@ export const categoryIcon = (name: string): Icon => categoryIcons[name] ?? sym('
 
 export { isoDate } from '@/lib/dates';
 
+// Last category saved per movement type, to preselect it on the next new movement.
+// shortcut: lives in memory, lost when the app restarts; persist it (AsyncStorage) if people miss it.
+export const lastCategory: Partial<Record<Transaction['type'], string>> = {};
+
 export const formatMoney = (cents: number, currency: string) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(cents / 100);
 

@@ -1,20 +1,19 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
 
-import { deudasError } from '@/components/deudas/shared';
-import { Chip, haptic } from '@/components/movimientos/shared';
-import { AmountField, Button, DateField, Field, FormScreen, Select, Text } from '@/components/ui';
+import { deudasError, Segmented } from '@/components/deudas/shared';
+import { haptic } from '@/components/movimientos/shared';
+import { AmountHero, Button, DateField, Disclosure, Field, FormScreen, Text, type Currency } from '@/components/ui';
 import { api } from '@/lib/api';
 import { parseAmount } from '@/lib/money';
-import { colors, space } from '@/theme';
+import { colors } from '@/theme';
 
 // POST /api/debts (CreateDebtRequest). Same sheet as movimiento.tsx; options live in deudas/_layout.tsx.
 export default function NuevaDeuda() {
   const [direction, setDirection] = useState<'OWED' | 'OWE'>('OWED');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const [currency, setCurrency] = useState<Currency>('ARS');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -51,14 +50,20 @@ export default function NuevaDeuda() {
     }
   };
 
+  const footer = (
+    <>
+      {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
+      <Button title="Guardar deuda" loading={saving} onPress={save} />
+    </>
+  );
+
   return (
-    <FormScreen>
+    <FormScreen footer={footer}>
       <Text variant="title">Nueva deuda</Text>
 
-      <Select
-        label="Tipo"
-        value={direction}
+      <Segmented
         options={[{ value: 'OWED', label: 'Me deben' }, { value: 'OWE', label: 'Debo' }]}
+        value={direction}
         onChange={setDirection}
       />
 
@@ -71,28 +76,20 @@ export default function NuevaDeuda() {
         error={tried ? invalid.name || undefined : undefined}
       />
 
-      <AmountField
-        label={`Monto (${currency})`}
+      <AmountHero
+        label="Monto"
         value={amount}
         onChangeText={setAmount}
-        placeholder="0,00"
+        currency={currency}
+        onCurrency={setCurrency}
         error={tried ? invalid.amount || undefined : undefined}
       />
 
-      <View style={{ gap: space.sm }}>
-        <Text variant="label">Moneda</Text>
-        <View style={{ flexDirection: 'row', gap: space.sm }}>
-          {(['ARS', 'USD'] as const).map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
-        </View>
-      </View>
-
       <Field label="Descripción (opcional)" value={description} onChangeText={setDescription} placeholder="Ej: la cena del viernes" />
 
-      <DateField label="Vence (opcional)" value={dueDate} onChange={setDueDate} placeholder="Sin fecha" optional />
-
-      {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
-
-      <Button title="Guardar deuda" loading={saving} onPress={save} />
+      <Disclosure>
+        <DateField label="Vence (opcional)" value={dueDate} onChange={setDueDate} placeholder="Sin fecha" optional />
+      </Disclosure>
     </FormScreen>
   );
 }

@@ -2,19 +2,24 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
-import { deudasError, money, today } from '@/components/deudas/shared';
+import { deudasError, formatDate, money, today } from '@/components/deudas/shared';
 import { categoryIcon, Chip, haptic, type Category } from '@/components/movimientos/shared';
-import { AmountField, Button, DateField, Field, FormScreen, Text } from '@/components/ui';
+import { AmountField, AmountHero, Button, DateField, Disclosure, Field, FormScreen, Text, type Currency } from '@/components/ui';
 import { api } from '@/lib/api';
 import { parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
 
+const QUICK = [3, 6, 12, 18];
+
 // POST /api/purchases (CreatePurchaseRequest). Same sheet as movimiento.tsx; options live in deudas/_layout.tsx.
+// purchaseDate is the date of the first installment (the API adds one month per installment).
 export default function NuevaCompra() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [installments, setInstallments] = useState('3');
-  const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const [other, setOther] = useState(false); // "Otra": free numeric field instead of a quick chip
+  const [currency, setCurrency] = useState<Currency>('ARS');
+  const [rate, setRate] = useState('');
   const [date, setDate] = useState(today());
   const [categories, setCategories] = useState<Category[]>();
   const [categoryId, setCategoryId] = useState('');
@@ -38,6 +43,7 @@ export default function NuevaCompra() {
     amount: !(value > 0) && 'Ingresá un monto mayor a cero.',
     installments: !nValid && 'Entre 1 y 60.',
     category: !categoryId && 'Elegí una categoría.',
+    rate: currency !== 'ARS' && rate !== '' && !(parseAmount(rate) > 0) && 'Cotización inválida.',
   };
 
   const save = async () => {
@@ -53,6 +59,7 @@ export default function NuevaCompra() {
         categoryId,
         purchaseDate: date,
         currency,
+        exchangeRate: currency !== 'ARS' && rate ? parseAmount(rate) : undefined,
       });
       haptic.success();
       router.back();
@@ -63,46 +70,60 @@ export default function NuevaCompra() {
     }
   };
 
+  const footer = (
+    <>
+      {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
+      <Button title="Guardar compra" loading={saving} onPress={save} />
+    </>
+  );
+
   return (
-    <FormScreen>
+    <FormScreen footer={footer}>
       <Text variant="title">Compra en cuotas</Text>
+
+      <AmountHero
+        label="Monto total"
+        value={amount}
+        onChangeText={setAmount}
+        currency={currency}
+        onCurrency={setCurrency}
+        autoFocus
+        error={tried ? invalid.amount || undefined : undefined}
+      />
 
       <Field
         label="¿Qué compraste?"
         value={description}
         onChangeText={setDescription}
         placeholder="Ej: heladera"
-        autoFocus
         error={tried ? invalid.description || undefined : undefined}
       />
 
-      <AmountField
-        label={`Monto total (${currency})`}
-        value={amount}
-        onChangeText={setAmount}
-        placeholder="0,00"
-        error={tried ? invalid.amount || undefined : undefined}
-      />
-
       <View style={{ gap: space.sm }}>
-        <Text variant="label">Moneda</Text>
-        <View style={{ flexDirection: 'row', gap: space.sm }}>
-          {(['ARS', 'USD'] as const).map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
+        <Text variant="label">Cuotas</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+          {QUICK.map((q) => (
+            <Chip key={q} label={String(q)} selected={!other && n === q} onPress={() => { setOther(false); setInstallments(String(q)); }} />
+          ))}
+          <Chip label="Otra" selected={other} onPress={() => { setOther(true); setInstallments(''); }} />
         </View>
+        {other ? (
+          <Field
+            label="Cantidad de cuotas"
+            value={installments}
+            onChangeText={setInstallments}
+            keyboardType="number-pad"
+            placeholder="Entre 1 y 60"
+            autoFocus
+            error={tried ? invalid.installments || undefined : undefined}
+          />
+        ) : null}
+        {value > 0 && nValid ? (
+          <Text accessibilityLiveRegion="polite" variant="small" style={{ color: colors.green }}>
+            {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor(Math.round(value * 100) / n), currency)} · primera el {formatDate(date)}
+          </Text>
+        ) : null}
       </View>
-
-      <Field
-        label="Cuotas"
-        value={installments}
-        onChangeText={setInstallments}
-        keyboardType="number-pad"
-        error={tried ? invalid.installments || undefined : undefined}
-      />
-      {value > 0 && nValid ? (
-        <Text variant="small" style={{ color: colors.textMuted }}>
-          {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor((value * 100) / n), currency)}
-        </Text>
-      ) : null}
 
       <View style={{ gap: space.sm }}>
         <Text variant="label">Categoría</Text>
@@ -118,11 +139,18 @@ export default function NuevaCompra() {
         {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
       </View>
 
-      <DateField label="Fecha" value={date} onChange={setDate} />
-
-      {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
-
-      <Button title="Guardar compra" loading={saving} onPress={save} />
+      <Disclosure reveal={currency !== 'ARS' && ((tried && !!invalid.rate) || !!error)}>
+        <DateField label="Primera cuota" value={date} onChange={setDate} />
+        {currency !== 'ARS' && (
+          <AmountField
+            label="Cotización (opcional)"
+            value={rate}
+            onChangeText={setRate}
+            placeholder="La del día, si no la cargás"
+            error={tried ? invalid.rate || undefined : undefined}
+          />
+        )}
+      </Disclosure>
     </FormScreen>
   );
 }
