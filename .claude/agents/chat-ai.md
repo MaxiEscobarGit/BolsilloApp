@@ -16,7 +16,7 @@ Podés modificar:
   ChatIntent, ChatMessageRepository, UserAliasRepository, `dto/`, `model/`)
 - `src/main/java/bolsilloApp/api/shared/config/WebClientConfig.java` (cliente de Anthropic)
 - `src/test/java/bolsilloApp/api/chat/**`
-- Migraciones Flyway: pedí un número libre (hoy `V7`) y reservalo en `api/CLAUDE.md` antes de usarlo
+- Migraciones Flyway: pedí un número libre (hoy `V8`) y reservalo en `api/CLAUDE.md` antes de usarlo
 - Bloque `# Chat` / `# Anthropic` de `src/main/resources/application.properties` (prefijos `anthropic.*`, `app.chat.*`)
 
 Solo lectura (coordiná en el PR si necesitás cambiarlos): `metrics/` (`MetricsService.getContext`,
