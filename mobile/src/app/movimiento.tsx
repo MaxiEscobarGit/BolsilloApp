@@ -1,10 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, View } from 'react-native';
 
 import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { AmountField, Button, DateField, Field, Select, Text } from '@/components/ui';
+import { AmountField, Button, DateField, Field, FormScreen, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatAmount, parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
@@ -95,86 +94,80 @@ export default function MovimientoSheet() {
   const typeLabel = { EXPENSE: 'Gasto', INCOME: 'Ingreso', DEBT: 'Deuda' };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        {!loaded ? (
-          error ? (
-            <View style={{ padding: space.lg, gap: space.md }}>
-              <Text style={{ color: colors.coral }}>{error}</Text>
-              <Button title="Volver" kind="ghost" onPress={() => router.back()} />
-            </View>
-          ) : (
-            <ActivityIndicator color={colors.green} style={{ marginTop: space.xl }} />
-          )
+    <FormScreen>
+      {!loaded ? (
+        error ? (
+          <View style={{ padding: space.lg, gap: space.md }}>
+            <Text style={{ color: colors.coral }}>{error}</Text>
+            <Button title="Volver" kind="ghost" onPress={() => router.back()} />
+          </View>
         ) : (
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            automaticallyAdjustKeyboardInsets
-            contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl, gap: space.lg }}>
-            <Text variant="title">{id ? 'Editar movimiento' : 'Nuevo movimiento'}</Text>
+          <ActivityIndicator color={colors.green} style={{ marginTop: space.xl }} />
+        )
+      ) : (
+        <>
+          <Text variant="title">{id ? 'Editar movimiento' : 'Nuevo movimiento'}</Text>
 
-            <Select
-              label="Tipo"
-              value={txType}
-              options={types.map((t) => ({ value: t, label: typeLabel[t] }))}
-              onChange={(t) => { setTxType(t); setCategoryId(''); }}
-            />
+          <Select
+            label="Tipo"
+            value={txType}
+            options={types.map((t) => ({ value: t, label: typeLabel[t] }))}
+            onChange={(t) => { setTxType(t); setCategoryId(''); }}
+          />
 
+          <AmountField
+            label={`Monto (${currency})`}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0,00"
+            autoFocus={!id}
+            error={tried ? invalid.amount || undefined : undefined}
+          />
+
+          <View style={{ gap: space.sm }}>
+            <Text variant="label">Moneda</Text>
+            <View style={{ flexDirection: 'row', gap: space.sm }}>
+              {['ARS', 'USD'].map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
+            </View>
+          </View>
+          {currency !== 'ARS' && (
             <AmountField
-              label={`Monto (${currency})`}
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0,00"
-              autoFocus={!id}
-              error={tried ? invalid.amount || undefined : undefined}
+              label="Cotización (opcional)"
+              value={rate}
+              onChangeText={setRate}
+              placeholder="La del día, si no la cargás"
+              error={tried ? invalid.rate || undefined : undefined}
             />
+          )}
 
-            <View style={{ gap: space.sm }}>
-              <Text variant="label">Moneda</Text>
-              <View style={{ flexDirection: 'row', gap: space.sm }}>
-                {['ARS', 'USD'].map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
-              </View>
+          <Field
+            label="Descripción"
+            value={description}
+            onChangeText={setDescription}
+            placeholder={txType === 'INCOME' ? 'Sueldo' : 'Super del finde'}
+            error={tried ? invalid.description || undefined : undefined}
+          />
+
+          <View style={{ gap: space.sm }}>
+            <Text variant="label">Categoría</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+              {categories.filter((c) => txType === 'DEBT' || c.type === txType).map((c) => (
+                <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+              ))}
             </View>
-            {currency !== 'ARS' && (
-              <AmountField
-                label="Cotización (opcional)"
-                value={rate}
-                onChangeText={setRate}
-                placeholder="La del día, si no la cargás"
-                error={tried ? invalid.rate || undefined : undefined}
-              />
-            )}
+            {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
+          </View>
 
-            <Field
-              label="Descripción"
-              value={description}
-              onChangeText={setDescription}
-              placeholder={txType === 'INCOME' ? 'Sueldo' : 'Super del finde'}
-              error={tried ? invalid.description || undefined : undefined}
-            />
+          <DateField label="Fecha" value={date} onChange={setDate} />
 
-            <View style={{ gap: space.sm }}>
-              <Text variant="label">Categoría</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-                {categories.filter((c) => txType === 'DEBT' || c.type === txType).map((c) => (
-                  <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
-                ))}
-              </View>
-              {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
-            </View>
+          {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
 
-            <DateField label="Fecha" value={date} onChange={setDate} />
-
-            {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
-
-            <Button title={id ? 'Guardar cambios' : 'Guardar'} loading={busy} onPress={save} />
-            {id ? (
-              <Button title="Borrar movimiento" kind="ghost" disabled={busy} onPress={remove} />
-            ) : null}
-          </ScrollView>
-        )}
-      </SafeAreaView>
-    </View>
+          <Button title={id ? 'Guardar cambios' : 'Guardar'} loading={busy} onPress={save} />
+          {id ? (
+            <Button title="Borrar movimiento" kind="ghost" disabled={busy} onPress={remove} />
+          ) : null}
+        </>
+      )}
+    </FormScreen>
   );
 }

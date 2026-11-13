@@ -2,7 +2,9 @@ import * as Haptics from 'expo-haptics';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   Text as RNText,
   ScrollView,
@@ -112,7 +114,7 @@ export function Button({
           transitionTimingFunction: cubicBezier(0.23, 1, 0.32, 1),
         }}>
         <RNText
-          style={[type.label, { fontFamily: fonts.monoMedium, color: primary ? colors.onGreen : colors.text }]}>
+          style={[type.label, { fontFamily: fonts.semibold, color: primary ? colors.onGreen : colors.text }]}>
           {loading ? 'Cargando…' : title}
         </RNText>
       </Animated.View>
@@ -120,31 +122,65 @@ export function Button({
   );
 }
 
-export function Field({ label, error, ...props }: TextInputProps & { label: string; error?: string }) {
+// Shared look of Field, Select and DateField. Documented exception to "no borders": input controls carry a
+// subtle 1 pt outline (green on focus, coral on error) so they read as tappable against the canvas.
+function inputBox(error?: string, focused?: boolean) {
+  return {
+    minHeight: 48,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: error ? colors.coral : focused ? colors.green : colors.line,
+  } as const;
+}
+
+// Label on top (space.xs apart), control, error in coral underneath.
+function Labeled({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={{ gap: space.xs }}>
       <Text variant="label">{label}</Text>
+      {children}
+      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+    </View>
+  );
+}
+
+// Scrollable form that stays reachable with the keyboard open: KeyboardAvoidingView pads on iOS (Android
+// resizes the window), and the bottom padding keeps the save button above the keyboard and home indicator.
+// shortcut: no keyboardVerticalOffset, the form sheet is bottom-anchored so the view's own frame is enough;
+// add one if a device shows the last field still covered.
+export function FormScreen({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl + insets.bottom, gap: space.lg }}>
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+export function Field({ label, error, onFocus, onBlur, ...props }: TextInputProps & { label: string; error?: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <Labeled label={label} error={error}>
       <TextInput
         placeholderTextColor={colors.textFaint}
         selectionColor={colors.green}
+        accessibilityLabel={label}
         {...props}
-        style={[
-          type.body,
-          {
-            color: colors.text,
-            backgroundColor: colors.surface,
-            borderRadius: radius.md,
-            // Borderless like the rest of the UI; the outline only appears to flag an error.
-            borderWidth: error ? 1 : 0,
-            borderColor: colors.coral,
-            paddingHorizontal: space.md,
-            minHeight: 52,
-          },
-          props.style,
-        ]}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+        style={[type.body, inputBox(error, focused), { color: colors.text }, props.style]}
       />
-      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
-    </View>
+    </Labeled>
   );
 }
 
@@ -223,31 +259,21 @@ export function Select<T extends string>({
     onChange(v);
   };
   return (
-    <View style={{ gap: space.sm }}>
-      <Text variant="label">{label}</Text>
+    <>
+      <Labeled label={label} error={error}>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityValue={{ text: current?.label ?? placeholder }}
-        style={({ pressed }) => ({
-          minHeight: 52,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: space.sm,
-          paddingHorizontal: space.md,
-          borderRadius: radius.md,
-          backgroundColor: pressed ? colors.surfaceHigh : colors.surface,
-          borderWidth: error ? 1 : 0,
-          borderColor: colors.coral,
-        })}>
+        style={({ pressed }) => ({ ...inputBox(error), flexDirection: 'row', alignItems: 'center', gap: space.sm, opacity: pressed ? 0.7 : 1 })}>
         {current?.icon && <SymbolView name={current.icon} size={18} tintColor={colors.text} />}
         <Text numberOfLines={1} style={{ flex: 1, color: current ? colors.text : colors.textFaint }}>
           {current?.label ?? placeholder}
         </Text>
         <SymbolView name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }} size={18} tintColor={colors.textMuted} />
       </Pressable>
-      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+      </Labeled>
 
       <Sheet open={open} onClose={close} label={label}>
         <ScrollView accessibilityRole="radiogroup">
@@ -276,7 +302,7 @@ export function Select<T extends string>({
           })}
         </ScrollView>
       </Sheet>
-    </View>
+    </>
   );
 }
 
@@ -381,28 +407,18 @@ export function DateField({
     onChange(iso);
   };
   return (
-    <View style={{ gap: space.sm }}>
-      <Text variant="label">{label}</Text>
+    <>
+      <Labeled label={label} error={error}>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityValue={{ text: value ? formatDate(value) : placeholder }}
-        style={({ pressed }) => ({
-          minHeight: 52,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: space.sm,
-          paddingHorizontal: space.md,
-          borderRadius: radius.md,
-          backgroundColor: pressed ? colors.surfaceHigh : colors.surface,
-          borderWidth: error ? 1 : 0,
-          borderColor: colors.coral,
-        })}>
+        style={({ pressed }) => ({ ...inputBox(error), flexDirection: 'row', alignItems: 'center', gap: space.sm, opacity: pressed ? 0.7 : 1 })}>
         <Text style={{ flex: 1, color: value ? colors.text : colors.textFaint }}>{value ? formatDate(value) : placeholder}</Text>
         <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' }} size={18} tintColor={colors.textMuted} />
       </Pressable>
-      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+      </Labeled>
 
       <Sheet open={open} onClose={close} label={label}>
         <Calendar value={value} onPick={pick} />
@@ -412,6 +428,6 @@ export function DateField({
           </View>
         ) : null}
       </Sheet>
-    </View>
+    </>
   );
 }

@@ -112,7 +112,7 @@ function Stat({ value, caption, highlight, color }: { value: string; caption: st
         backgroundColor: highlight ? colors.green : colors.surface,
         backgroundImage: highlight ? `linear-gradient(135deg, ${colors.greenDeep}, ${colors.green})` : undefined,
       }}>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={[highlight ? type.display : type.title, { fontFamily: fonts.regular, color: ink }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={[highlight ? type.display : type.title, { fontFamily: highlight ? fonts.semibold : fonts.medium, color: ink }]}>
         {value}
       </Text>
       <Text style={{ alignSelf: 'flex-end', textAlign: 'right', fontSize: 12, lineHeight: 14, color: highlight ? colors.onGreen : colors.textMuted }}>
