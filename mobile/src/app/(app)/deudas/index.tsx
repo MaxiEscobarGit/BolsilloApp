@@ -3,33 +3,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 
-import { Notice, Segmented, daysUntil, deudasError, formatDate, money } from '@/components/deudas/shared';
+import { Notice, Segmented, deudasError, dueInfo, formatDate, money, type Debt, type Purchase } from '@/components/deudas/shared';
 import { AddButton, Button, Card, Screen, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, radius, space } from '@/theme';
-
-// Copied from api/.../debts/dto/DebtResponse and purchases/dto/PurchaseResponse (fields we read).
-type Debt = {
-  id: string;
-  counterpartName: string;
-  amountCents: number;
-  currency: string;
-  direction: 'OWE' | 'OWED';
-  status: 'PENDING' | 'PAID';
-  description: string | null;
-  dueDate: string | null;
-};
-type Purchase = {
-  id: string;
-  description: string;
-  totalAmountCents: number;
-  currency: string;
-  totalInstallments: number;
-  paidInstallments: number;
-  remainingAmountCents: number;
-  nextInstallmentDate: string | null;
-  categoryName: string;
-};
 
 type Section = 'deudas' | 'cuotas';
 type Load<T> = { data?: T; error?: string; loading: boolean };
@@ -158,13 +135,7 @@ function DebtList({
       ) : (
         shown.map((d) => {
           const owed = d.direction === 'OWED';
-          const days = d.dueDate && d.status === 'PENDING' ? daysUntil(d.dueDate) : null;
-          const due =
-            days === null ? null
-            : days < 0 ? { text: `Vencida hace ${-days} ${-days === 1 ? 'día' : 'días'}`, urgent: true }
-            : days === 0 ? { text: 'Vence hoy', urgent: true }
-            : days <= 7 ? { text: `Vence en ${days} ${days === 1 ? 'día' : 'días'}`, urgent: true }
-            : { text: `Vence el ${formatDate(d.dueDate!)}`, urgent: false };
+          const due = d.dueDate && d.status === 'PENDING' ? dueInfo(d.dueDate) : null;
           return (
             <Card key={d.id} style={{ gap: space.sm }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
