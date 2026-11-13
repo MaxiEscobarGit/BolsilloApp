@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { categoryIcon, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { Button, Card, Screen, Select, Text } from '@/components/ui';
+import { AddButton, Button, Card, Screen, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { colors, fonts, radius, space } from '@/theme';
@@ -65,17 +65,7 @@ export default function Movimientos() {
       <View style={{ gap: space.md, paddingTop: space.lg, paddingBottom: space.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg }}>
           <Text variant="title">Movimientos</Text>
-          <Pressable
-            onPress={() => router.push('/movimiento')}
-            accessibilityRole="button"
-            accessibilityLabel="Cargar movimiento"
-            hitSlop={8}
-            style={({ pressed }) => ({
-              width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-              backgroundColor: colors.green, transform: [{ scale: pressed ? 0.94 : 1 }],
-            })}>
-            <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={24} tintColor={colors.onGreen} />
-          </Pressable>
+          <AddButton accessibilityLabel="Cargar movimiento" onPress={() => router.push('/movimiento')} />
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.sm }}>

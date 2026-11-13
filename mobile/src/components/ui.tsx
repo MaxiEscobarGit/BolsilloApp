@@ -27,6 +27,23 @@ export function Text({ variant = 'body', style, ...props }: TextProps & { varian
   return <RNText {...props} style={[{ color }, type[variant], style]} />;
 }
 
+// Round "+" for screen headers (Movimientos, Deudas y cuotas): same size and press feedback everywhere.
+export function AddButton({ accessibilityLabel, onPress }: { accessibilityLabel: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+        backgroundColor: colors.green, transform: [{ scale: pressed ? 0.94 : 1 }],
+      })}>
+      <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={24} tintColor={colors.onGreen} />
+    </Pressable>
+  );
+}
+
 // Full-screen canvas with the reference site's green glow bleeding from the top.
 export function Screen({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return (

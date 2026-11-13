@@ -1,19 +1,16 @@
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Segmented, SheetHeader, deudasError, isDate, money, today } from '@/components/deudas/shared';
-import { categoryIcon } from '@/components/movimientos/shared';
-import { AmountField, Button, Field, Select, Text } from '@/components/ui';
+import { deudasError, isDate, money, today } from '@/components/deudas/shared';
+import { categoryIcon, Chip, haptic, type Category } from '@/components/movimientos/shared';
+import { AmountField, Button, Field, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
 
-// Copied from api/.../categories/dto/CategoryResponse (fields we read).
-type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME' };
-
-// POST /api/purchases (CreatePurchaseRequest).
+// POST /api/purchases (CreatePurchaseRequest). Same sheet as movimiento.tsx; options live in deudas/_layout.tsx.
 export default function NuevaCompra() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -21,9 +18,10 @@ export default function NuevaCompra() {
   const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
   const [date, setDate] = useState(today());
   const [categories, setCategories] = useState<Category[]>();
-  const [categoryId, setCategoryId] = useState<string>();
+  const [categoryId, setCategoryId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const [tried, setTried] = useState(false);
 
   useEffect(() => {
     api
@@ -32,15 +30,21 @@ export default function NuevaCompra() {
       .catch((e) => { setCategories([]); setError(deudasError(e)); });
   }, []);
 
+  // Inline validation, shown after the first try.
   const value = parseAmount(amount);
   const n = Number(installments);
   const nValid = Number.isInteger(n) && n >= 1 && n <= 60;
-  const amountError = amount && !(value > 0) ? 'Poné un monto mayor a cero.' : undefined;
-  const nError = installments && !nValid ? 'Entre 1 y 60.' : undefined;
-  const dateError = !isDate(date) ? 'Usá el formato AAAA-MM-DD.' : undefined;
-  const valid = description.trim() && value > 0 && nValid && !dateError && categoryId;
+  const invalid = {
+    description: !description.trim() && 'Contá qué compraste.',
+    amount: !(value > 0) && 'Ingresá un monto mayor a cero.',
+    installments: !nValid && 'Entre 1 y 60.',
+    category: !categoryId && 'Elegí una categoría.',
+    date: !isDate(date) && 'Usá el formato AAAA-MM-DD.',
+  };
 
   const save = async () => {
+    setTried(true);
+    if (Object.values(invalid).some(Boolean)) return haptic.error();
     setSaving(true);
     setError(undefined);
     try {
@@ -52,56 +56,91 @@ export default function NuevaCompra() {
         purchaseDate: date,
         currency,
       });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptic.success();
       router.back();
     } catch (e) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptic.error();
       setError(deudasError(e));
       setSaving(false);
     }
   };
 
   return (
-    <View style={{ padding: space.lg, gap: space.md, backgroundColor: colors.surface }}>
-      <SheetHeader title="Compra en cuotas" onCancel={() => router.back()} />
-      <Field label="¿Qué compraste?" value={description} onChangeText={setDescription} placeholder="Ej: heladera" autoFocus />
-      <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1 }}>
-          <AmountField label="Monto total" value={amount} onChangeText={setAmount} placeholder="0" error={amountError} />
-        </View>
-        <View style={{ width: 132, gap: space.sm }}>
-          <Text variant="label">Moneda</Text>
-          <Segmented options={[{ value: 'ARS', label: 'ARS' }, { value: 'USD', label: 'USD' }]} value={currency} onChange={setCurrency} />
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1 }}>
-          <Field label="Cuotas" value={installments} onChangeText={setInstallments} keyboardType="number-pad" error={nError} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Field label="Fecha" value={date} onChangeText={setDate} placeholder="AAAA-MM-DD" error={dateError} autoCapitalize="none" />
-        </View>
-      </View>
-      {value > 0 && nValid ? (
-        <Text variant="small" style={{ color: colors.textMuted }}>
-          {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor((value * 100) / n), currency)}
-        </Text>
-      ) : null}
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+        {/* iOS: the ScrollView insets itself for the keyboard; Android resizes the window. */}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl, gap: space.lg }}>
+          <Text variant="title">Compra en cuotas</Text>
 
-      {!categories ? (
-        <ActivityIndicator color={colors.green} accessibilityLabel="Cargando categorías" />
-      ) : (
-        <Select
-          label="Categoría"
-          value={categoryId}
-          placeholder="Elegí una categoría"
-          options={categories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name) }))}
-          onChange={setCategoryId}
-        />
-      )}
+          <Field
+            label="¿Qué compraste?"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Ej: heladera"
+            autoFocus
+            error={tried ? invalid.description || undefined : undefined}
+          />
 
-      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
-      <Button title="Guardar compra" onPress={save} loading={saving} disabled={!valid} />
+          <AmountField
+            label={`Monto total (${currency})`}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0,00"
+            error={tried ? invalid.amount || undefined : undefined}
+          />
+
+          <View style={{ gap: space.sm }}>
+            <Text variant="label">Moneda</Text>
+            <View style={{ flexDirection: 'row', gap: space.sm }}>
+              {(['ARS', 'USD'] as const).map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
+            </View>
+          </View>
+
+          <Field
+            label="Cuotas"
+            value={installments}
+            onChangeText={setInstallments}
+            keyboardType="number-pad"
+            error={tried ? invalid.installments || undefined : undefined}
+          />
+          {value > 0 && nValid ? (
+            <Text variant="small" style={{ color: colors.textMuted }}>
+              {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor((value * 100) / n), currency)}
+            </Text>
+          ) : null}
+
+          <View style={{ gap: space.sm }}>
+            <Text variant="label">Categoría</Text>
+            {!categories ? (
+              <ActivityIndicator color={colors.green} accessibilityLabel="Cargando categorías" />
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                {categories.map((c) => (
+                  <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+                ))}
+              </View>
+            )}
+            {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
+          </View>
+
+          <Field
+            label="Fecha"
+            value={date}
+            onChangeText={setDate}
+            placeholder="AAAA-MM-DD"
+            autoCapitalize="none"
+            error={tried ? invalid.date || undefined : undefined}
+          />
+
+          {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
+
+          <Button title="Guardar compra" loading={saving} onPress={save} />
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
