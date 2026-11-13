@@ -3,9 +3,10 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { Segmented, SheetHeader, deudasError, isDate, parseAmount } from '@/components/deudas/shared';
-import { Button, Field, Text } from '@/components/ui';
+import { Segmented, SheetHeader, deudasError, isDate } from '@/components/deudas/shared';
+import { AmountField, Button, Field, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
+import { parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
 
 // POST /api/debts (CreateDebtRequest).
@@ -20,9 +21,9 @@ export default function NuevaDeuda() {
   const [error, setError] = useState<string>();
 
   const value = parseAmount(amount);
-  const amountError = amount && Number.isNaN(value) ? 'Poné un monto mayor a cero.' : undefined;
+  const amountError = amount && !(value > 0) ? 'Poné un monto mayor a cero.' : undefined;
   const dateError = dueDate && !isDate(dueDate) ? 'Usá el formato AAAA-MM-DD.' : undefined;
-  const valid = name.trim() && !Number.isNaN(value) && !dateError;
+  const valid = name.trim() && value > 0 && !dateError;
 
   const save = async () => {
     setSaving(true);
@@ -48,15 +49,16 @@ export default function NuevaDeuda() {
   return (
     <View style={{ padding: space.lg, gap: space.md, backgroundColor: colors.surface }}>
       <SheetHeader title="Nueva deuda" onCancel={() => router.back()} />
-      <Segmented
-        options={[{ value: 'OWED', label: 'Me deben' }, { value: 'OWE', label: 'Debo' }]}
+      <Select
+        label="Tipo"
         value={direction}
+        options={[{ value: 'OWED', label: 'Me deben' }, { value: 'OWE', label: 'Debo' }]}
         onChange={setDirection}
       />
       <Field label={direction === 'OWED' ? '¿Quién te debe?' : '¿A quién le debés?'} value={name} onChangeText={setName} placeholder="Nombre" autoFocus />
       <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
-          <Field label="Monto" value={amount} onChangeText={setAmount} placeholder="0" keyboardType="decimal-pad" error={amountError} />
+          <AmountField label="Monto" value={amount} onChangeText={setAmount} placeholder="0" error={amountError} />
         </View>
         <View style={{ width: 132, gap: space.sm }}>
           <Text variant="label">Moneda</Text>

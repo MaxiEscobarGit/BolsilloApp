@@ -90,12 +90,6 @@ export function Notice({ title, body, children }: { title: string; body?: string
   );
 }
 
-// "12.000,50" (es-AR) or "12000.5" → 12000.5. NaN when it isn't a positive amount.
-export const parseAmount = (text: string) => {
-  const n = Number(text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text);
-  return n > 0 ? n : NaN;
-};
-
 export const isDate = (text: string) => /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text));
 
 // Header for the form sheets: title plus a cancel the user can always reach (wayfinding).

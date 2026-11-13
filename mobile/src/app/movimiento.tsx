@@ -4,12 +4,10 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
-import { Button, Field, Text } from '@/components/ui';
+import { AmountField, Button, Field, Select, Text } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatAmount, parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
-
-// "12.000,50" (es-AR) or "12000.50" → 12000.5. With a comma, dots are thousands separators.
-const parseAmount = (s: string) => Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
 
 // Add (no id) or edit (?id=) a transaction. A short, abandonable task: native form sheet (animate-expo),
 // configured in app/_layout.tsx.
@@ -33,13 +31,13 @@ export default function MovimientoSheet() {
     if (!id) return;
     api.get<Transaction>(`/api/transactions/${id}`)
       .then((t) => {
-        setAmount(String(t.amount).replace('.', ','));
+        setAmount(formatAmount(String(t.amount).replace('.', ',')));
         setTxType(t.type);
         setCategoryId(t.categoryId);
         setDescription(t.description);
         setDate(t.transactionDate);
         setCurrency(t.currency);
-        if (t.currency !== 'ARS') setRate(String(t.exchangeRate).replace('.', ','));
+        if (t.currency !== 'ARS') setRate(formatAmount(String(t.exchangeRate).replace('.', ',')));
         setLoaded(true);
       })
       .catch((e) => setError(txError(e)));
@@ -113,18 +111,18 @@ export default function MovimientoSheet() {
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: space.lg, gap: space.lg }}>
             <Text variant="title">{id ? 'Editar movimiento' : 'Nuevo movimiento'}</Text>
 
-            <View style={{ flexDirection: 'row', gap: space.sm }}>
-              {types.map((t) => (
-                <Chip key={t} label={typeLabel[t]} selected={txType === t} onPress={() => { setTxType(t); setCategoryId(''); }} />
-              ))}
-            </View>
+            <Select
+              label="Tipo"
+              value={txType}
+              options={types.map((t) => ({ value: t, label: typeLabel[t] }))}
+              onChange={(t) => { setTxType(t); setCategoryId(''); }}
+            />
 
-            <Field
+            <AmountField
               label={`Monto (${currency})`}
               value={amount}
               onChangeText={setAmount}
               placeholder="0,00"
-              keyboardType="decimal-pad"
               autoFocus={!id}
               error={tried ? invalid.amount || undefined : undefined}
             />
@@ -136,12 +134,11 @@ export default function MovimientoSheet() {
               </View>
             </View>
             {currency !== 'ARS' && (
-              <Field
+              <AmountField
                 label="Cotización (opcional)"
                 value={rate}
                 onChangeText={setRate}
                 placeholder="La del día, si no la cargás"
-                keyboardType="decimal-pad"
                 error={tried ? invalid.rate || undefined : undefined}
               />
             )}
