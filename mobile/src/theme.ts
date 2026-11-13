@@ -4,6 +4,7 @@ import { Easing } from 'react-native-reanimated';
 
 export const colors = {
   bg: '#0A0C10',
+  bgClear: 'rgba(10, 12, 16, 0)', // bg fully transparent: end of the scroll-edge gradient
   surface: '#141B23',
   surfaceHigh: '#1C2530',
   line: 'rgba(233, 236, 235, 0.10)',

@@ -58,56 +58,58 @@ export default function Inicio() {
   // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). Deudas y cuotas and the categories sit below it.
   return (
     <Screen>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ gap: space.md, paddingTop: space.lg, paddingBottom: bottomInset }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} tintColor={colors.green} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />
-        }>
-        <View style={{ gap: space.sm }}>
-          <Text variant="label">Este mes</Text>
-          <Text variant="title">Hola, {user?.displayName}</Text>
-        </View>
+      {(topInset) => (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ gap: space.md, paddingTop: topInset, paddingBottom: bottomInset }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} tintColor={colors.green} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />
+          }>
+          <View style={{ gap: space.sm }}>
+            <Text variant="label">Este mes</Text>
+            <Text variant="title">Hola, {user?.displayName}</Text>
+          </View>
 
-        {error ? <Text style={{ color: colors.coral }}>{error}</Text> : null}
+          {error ? <Text style={{ color: colors.coral }}>{error}</Text> : null}
 
-        <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Stat highlight value={summary ? formatCents(summary.balanceCents) : '—'} caption={(summary?.balanceCents ?? 0) < 0 ? 'Gastaste más\nde lo que entró' : 'Te queda\neste mes'} />
-        </View>
-        <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Stat value={summary ? formatCents(summary.totalIncomeCents) : '—'} caption={'Entró\neste mes'} color={colors.green} />
-          <Stat value={summary ? formatCents(summary.totalExpenseCents) : '—'} caption={'Salió\neste mes'} color={colors.coral} />
-        </View>
-        <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Stat value={savings === null ? '—' : `${savings} %`} caption={'De lo que entró,\nlo ahorraste'} />
-          <Stat
-            value={change === null ? '—' : `${change < 0 ? '−' : '+'}${Math.abs(Math.round(change))} %`}
-            caption={'Gastos vs.\nmes pasado'}
-            color={change === null || change === 0 ? undefined : change > 0 ? colors.coral : colors.green}
-          />
-        </View>
+          <View style={{ flexDirection: 'row', gap: space.md }}>
+            <Stat highlight value={summary ? formatCents(summary.balanceCents) : '—'} caption={(summary?.balanceCents ?? 0) < 0 ? 'Gastaste más\nde lo que entró' : 'Te queda\neste mes'} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: space.md }}>
+            <Stat value={summary ? formatCents(summary.totalIncomeCents) : '—'} caption={'Entró\neste mes'} color={colors.green} />
+            <Stat value={summary ? formatCents(summary.totalExpenseCents) : '—'} caption={'Salió\neste mes'} color={colors.coral} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: space.md }}>
+            <Stat value={savings === null ? '—' : `${savings} %`} caption={'De lo que entró,\nlo ahorraste'} />
+            <Stat
+              value={change === null ? '—' : `${change < 0 ? '−' : '+'}${Math.abs(Math.round(change))} %`}
+              caption={'Gastos vs.\nmes pasado'}
+              color={change === null || change === 0 ? undefined : change > 0 ? colors.coral : colors.green}
+            />
+          </View>
 
-        <DebtsCard debts={debts} purchases={purchases} error={debtsError} />
+          <DebtsCard debts={debts} purchases={purchases} error={debtsError} />
 
-        <Card style={{ gap: space.md }}>
-          <Text variant="label">Gastos por categoría</Text>
-          {expenses.length === 0 ? (
-            <Text style={{ color: colors.textMuted }}>Todavía no hay gastos este mes. Contáselos al asistente.</Text>
-          ) : (
-            expenses.map((c) => (
-              <View key={c.categoryName} style={{ gap: space.xs }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text variant="small">{c.categoryName}</Text>
-                  <Text variant="small" style={{ color: colors.textMuted }}>{formatCents(c.totalCents)}</Text>
+          <Card style={{ gap: space.md }}>
+            <Text variant="label">Gastos por categoría</Text>
+            {expenses.length === 0 ? (
+              <Text style={{ color: colors.textMuted }}>Todavía no hay gastos este mes. Contáselos al asistente.</Text>
+            ) : (
+              expenses.map((c) => (
+                <View key={c.categoryName} style={{ gap: space.xs }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text variant="small">{c.categoryName}</Text>
+                    <Text variant="small" style={{ color: colors.textMuted }}>{formatCents(c.totalCents)}</Text>
+                  </View>
+                  <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.surfaceHigh }}>
+                    <View style={{ height: 4, borderRadius: 2, width: `${(c.totalCents / maxExpense) * 100}%`, backgroundColor: colors.coral }} />
+                  </View>
                 </View>
-                <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.surfaceHigh }}>
-                  <View style={{ height: 4, borderRadius: 2, width: `${(c.totalCents / maxExpense) * 100}%`, backgroundColor: colors.coral }} />
-                </View>
-              </View>
-            ))
-          )}
-        </Card>
-      </ScrollView>
+              ))
+            )}
+          </Card>
+        </ScrollView>
+      )}
     </Screen>
   );
 }

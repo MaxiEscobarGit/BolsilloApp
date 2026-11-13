@@ -102,74 +102,78 @@ export default function Asistente() {
   const canSend = draft.trim().length > 0 && !sending;
 
   return (
-    <Screen style={{ paddingHorizontal: 0 }}>
-      <View style={{ paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.xs }}>
-        <Text variant="label">Asistente</Text>
-        <Text variant="heading">Contame qué gastaste</Text>
-      </View>
-
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-        {loading ? (
-          <ActivityIndicator color={colors.green} style={{ flex: 1 }} />
-        ) : messages.length === 0 && !sending ? (
-          <View style={{ flex: 1, justifyContent: 'flex-end', padding: space.lg, paddingBottom: space.lg + under, gap: space.sm }}>
-            <Text variant="label" style={{ marginBottom: space.xs }}>Probá con</Text>
-            {SUGGESTIONS.map((s) => <Button key={s} kind="ghost" title={s} onPress={() => send(s)} />)}
-          </View>
-        ) : (
-          <FlatList
-            showsVerticalScrollIndicator={false}
-            ref={list}
-            inverted
-            data={messages}
-            keyExtractor={(m) => m.id}
-            renderItem={({ item }) => <Bubble msg={item} />}
-            // Inverted: the list is flipped, so paddingTop ends up at the visual bottom.
-            contentContainerStyle={{ padding: space.lg, paddingTop: space.lg + under, gap: space.md }}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            onEndReached={loadOlder}
-            onEndReachedThreshold={0.3}
-            // Inverted: the header renders at the bottom, the footer at the top.
-            ListHeaderComponent={sending ? <Typing /> : undefined}
-            ListFooterComponent={loadingOlder ? <ActivityIndicator color={colors.textMuted} /> : undefined}
-          />
-        )}
-
-        <View
-          onLayout={(e) => setRowH(e.nativeEvent.layout.height)}
-          style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: rowPad, marginTop: -under, backgroundColor: glass === 'none' ? colors.bg : 'transparent' }}>
-          {/* Ends just above the tab pill (no glass over glass); reaches the bottom edge with the keyboard open. */}
-          <GlassFill kind={glass} style={{ left: space.sm, right: space.sm, bottom: keyboardOpen ? 0 : rowPad - space.sm, borderRadius: radius.lg, overflow: 'hidden' }} />
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Gasté, cobré, ¿cuánto…?"
-            placeholderTextColor={colors.textFaint}
-            selectionColor={colors.green}
-            multiline
-            maxLength={2000}
-            submitBehavior="submit"
-            onSubmitEditing={() => send(draft)}
-            returnKeyType="send"
-            accessibilityLabel="Mensaje para el asistente"
-            style={[type.body, { flex: 1, color: colors.text, backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.md, paddingTop: 12, paddingBottom: 12, minHeight: 48, maxHeight: 140 }]}
-          />
-          <Pressable
-            onPress={() => send(draft)}
-            disabled={!canSend}
-            accessibilityRole="button"
-            accessibilityLabel="Enviar"
-            accessibilityState={{ disabled: !canSend }}
-            hitSlop={4}>
-            {({ pressed }) => (
-              <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.green, opacity: canSend ? 1 : 0.35, transform: [{ scale: pressed ? 0.94 : 1 }] }}>
-                <SymbolView name={{ ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' }} size={22} tintColor={colors.onGreen} />
-              </View>
-            )}
-          </Pressable>
+    <Screen
+      style={{ paddingHorizontal: 0 }}
+      header={
+        <View style={{ paddingVertical: space.md, gap: space.xs }}>
+          <Text variant="label">Asistente</Text>
+          <Text variant="heading">Contame qué gastaste</Text>
         </View>
-      </KeyboardAvoidingView>
+      }>
+      {(topInset) => (
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+          {loading ? (
+            <ActivityIndicator color={colors.green} style={{ flex: 1 }} />
+          ) : messages.length === 0 && !sending ? (
+            <View style={{ flex: 1, justifyContent: 'flex-end', padding: space.lg, paddingTop: topInset, paddingBottom: space.lg + under, gap: space.sm }}>
+              <Text variant="label" style={{ marginBottom: space.xs }}>Probá con</Text>
+              {SUGGESTIONS.map((s) => <Button key={s} kind="ghost" title={s} onPress={() => send(s)} />)}
+            </View>
+          ) : (
+            <FlatList
+              showsVerticalScrollIndicator={false}
+              ref={list}
+              inverted
+              data={messages}
+              keyExtractor={(m) => m.id}
+              renderItem={({ item }) => <Bubble msg={item} />}
+              // Inverted: the list is flipped, so paddingTop ends up at the visual bottom and paddingBottom at the top.
+              contentContainerStyle={{ padding: space.lg, paddingTop: space.lg + under, paddingBottom: topInset, gap: space.md }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              onEndReached={loadOlder}
+              onEndReachedThreshold={0.3}
+              // Inverted: the header renders at the bottom, the footer at the top.
+              ListHeaderComponent={sending ? <Typing /> : undefined}
+              ListFooterComponent={loadingOlder ? <ActivityIndicator color={colors.textMuted} /> : undefined}
+            />
+          )}
+
+          <View
+            onLayout={(e) => setRowH(e.nativeEvent.layout.height)}
+            style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: rowPad, marginTop: -under, backgroundColor: glass === 'none' ? colors.bg : 'transparent' }}>
+            {/* Ends just above the tab pill (no glass over glass); reaches the bottom edge with the keyboard open. */}
+            <GlassFill kind={glass} style={{ left: space.sm, right: space.sm, bottom: keyboardOpen ? 0 : rowPad - space.sm, borderRadius: radius.lg, overflow: 'hidden' }} />
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Gasté, cobré, ¿cuánto…?"
+              placeholderTextColor={colors.textFaint}
+              selectionColor={colors.green}
+              multiline
+              maxLength={2000}
+              submitBehavior="submit"
+              onSubmitEditing={() => send(draft)}
+              returnKeyType="send"
+              accessibilityLabel="Mensaje para el asistente"
+              style={[type.body, { flex: 1, color: colors.text, backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.md, paddingTop: 12, paddingBottom: 12, minHeight: 48, maxHeight: 140 }]}
+            />
+            <Pressable
+              onPress={() => send(draft)}
+              disabled={!canSend}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar"
+              accessibilityState={{ disabled: !canSend }}
+              hitSlop={4}>
+              {({ pressed }) => (
+                <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.green, opacity: canSend ? 1 : 0.35, transform: [{ scale: pressed ? 0.94 : 1 }] }}>
+                  <SymbolView name={{ ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' }} size={22} tintColor={colors.onGreen} />
+                </View>
+              )}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      )}
     </Screen>
   );
 }

@@ -1,4 +1,6 @@
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
 import {
@@ -55,8 +57,16 @@ export function useBottomBarInset() {
   return space.sm + size.tabBar + Math.max(bottom, space.md) + space.md;
 }
 
-// Full-screen canvas with the reference site's green glow bleeding from the top.
-export function Screen({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+// Full-screen canvas with the reference site's green glow bleeding from the top. Content runs edge to edge and
+// scrolls under the status bar and the optional floating `header`; a scroll edge (apple-design §12) fades it out:
+// progressive blur on iOS (stacked BlurViews, no masks), plain gradient to the canvas elsewhere.
+// `children` may be a function receiving the top inset (status bar + measured header + space.md): the scroll content's paddingTop.
+export function Screen({ children, header, style }: { children: ReactNode | ((topInset: number) => ReactNode); header?: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const { top } = useSafeAreaInsets();
+  const glass = useGlass();
+  const [headerH, setHeaderH] = useState(0);
+  const chrome = header ? headerH || top : top; // status bar + header, as measured
+  const fade = chrome + space.xl;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View
@@ -66,9 +76,22 @@ export function Screen({ children, style }: { children: ReactNode; style?: Style
           backgroundImage: 'radial-gradient(ellipse at top, rgba(0, 255, 133, 0.18), transparent 70%)',
         }}
       />
-      <SafeAreaView edges={['top']} style={[{ flex: 1, paddingHorizontal: space.lg }, style]}>
-        {children}
-      </SafeAreaView>
+      <View style={[{ flex: 1, paddingHorizontal: space.lg }, style]}>{typeof children === 'function' ? children(chrome + space.md) : children}</View>
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: fade }}>
+        {glass !== 'none' && [0, 0.33, 0.66].map((k) => (
+          <BlurView key={k} tint="dark" intensity={20} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: fade - space.xl * k }} />
+        ))}
+        {/* Solid behind the header so it reads; with no header it fades from the very top and the blur shows through. */}
+        <LinearGradient colors={[colors.bg, colors.bgClear]} locations={[header ? chrome / fade : 0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+      </View>
+      {header ? (
+        <View
+          pointerEvents="box-none"
+          onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: top, paddingHorizontal: space.lg }}>
+          {header}
+        </View>
+      ) : null}
     </View>
   );
 }
