@@ -8,9 +8,9 @@ export default function DeudasLayout() {
   const reduced = useReducedMotion();
   const sheet = {
     presentation: 'formSheet',
-    sheetAllowedDetents: 'fitToContents',
+    sheetAllowedDetents: [1] as number[],
     sheetGrabberVisible: true,
-    contentStyle: { backgroundColor: colors.surface },
+    contentStyle: { backgroundColor: colors.bg },
     animation: reduced ? 'fade' : 'default',
   } as const;
   return (

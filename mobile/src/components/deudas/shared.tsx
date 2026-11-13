@@ -91,15 +91,3 @@ export function Notice({ title, body, children }: { title: string; body?: string
 }
 
 export const isDate = (text: string) => /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text));
-
-// Header for the form sheets: title plus a cancel the user can always reach (wayfinding).
-export function SheetHeader({ title, onCancel }: { title: string; onCancel: () => void }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Text variant="heading">{title}</Text>
-      <Pressable accessibilityRole="button" hitSlop={12} onPress={onCancel} style={{ minHeight: 44, justifyContent: 'center' }}>
-        <Text style={{ color: colors.textMuted }}>Cancelar</Text>
-      </Pressable>
-    </View>
-  );
-}

@@ -108,7 +108,11 @@ export default function MovimientoSheet() {
             <ActivityIndicator color={colors.green} style={{ marginTop: space.xl }} />
           )
         ) : (
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: space.lg, gap: space.lg }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl, gap: space.lg }}>
             <Text variant="title">{id ? 'Editar movimiento' : 'Nuevo movimiento'}</Text>
 
             <Select

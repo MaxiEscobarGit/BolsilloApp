@@ -1,11 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 
 import { Notice, Segmented, daysUntil, deudasError, formatDate, money } from '@/components/deudas/shared';
-import { Button, Card, Screen, Text } from '@/components/ui';
+import { AddButton, Button, Card, Screen, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, radius, space } from '@/theme';
 
@@ -70,22 +69,10 @@ export default function Deudas() {
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.lg, paddingBottom: space.md }}>
         <Text variant="title">Deudas y cuotas</Text>
-        <Pressable
-          accessibilityRole="button"
+        <AddButton
           accessibilityLabel={section === 'deudas' ? 'Nueva deuda' : 'Nueva compra en cuotas'}
-          hitSlop={8}
           onPress={() => router.push(section === 'deudas' ? '/deudas/nueva' : '/deudas/compra')}
-          style={({ pressed }) => ({
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: colors.green,
-            opacity: pressed ? 0.8 : 1,
-          })}>
-          <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={22} tintColor={colors.onGreen} />
-        </Pressable>
+        />
       </View>
 
       <Segmented
