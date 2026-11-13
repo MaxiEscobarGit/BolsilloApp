@@ -23,7 +23,7 @@ la versión web (Expo web) sirve para previsualizar. El backend es `../api` (Spr
 | Animación / gestos | Reanimated 4 (+ worklets) · Gesture Handler · expo-haptics |
 | Íconos | `expo-symbols` (`SymbolView`): SF Symbols en iOS, Material Symbols en Android y web |
 | Sesión | refresh token en `expo-secure-store`, access token en memoria (`src/lib/api.ts`) |
-| Tipografía | Geist + Geist Mono (`@expo-google-fonts`) |
+| Tipografía | Geist (`@expo-google-fonts/geist`) |
 | Estilos | `StyleSheet`/estilos inline con los tokens de `src/theme.ts`. Sin librería de UI |
 
 No agregues dependencias sin necesidad real (ponytail). Si hace falta una: `npx expo install <pkg>`.
@@ -51,7 +51,7 @@ src/
 
 Referencia visual: tibdigital.com. Lienzo casi negro (`#0A0C10`), superficies `#141B23`, acento verde
 neón `#00FF85` (con un resplandor radial arriba de cada pantalla), coral `#FF6B50` para gastos, deudas y
-errores. Títulos en Geist con tracking negativo; etiquetas en **Geist Mono en mayúsculas** (variante `label`).
+errores. Títulos en Geist con tracking negativo; etiquetas en **Geist semibold en mayúsculas** (variante `label`); una sola familia, la jerarquía va por grosor y tamaño.
 Usá siempre los tokens de `src/theme.ts`; si falta uno, agregalo ahí, no hardcodees.
 
 ## Reglas

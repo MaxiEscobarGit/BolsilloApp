@@ -70,7 +70,7 @@ export default function Movimientos() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.sm }}>
           <MonthArrow dir="back" onPress={() => shiftMonth(-1)} />
-          <Text variant="label" style={{ color: colors.text }}>{monthName(month)}</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.text }}>{monthName(month)}</Text>
           <MonthArrow dir="forward" disabled={isCurrentMonth} onPress={() => shiftMonth(1)} />
         </View>
 
@@ -177,7 +177,7 @@ function Row({ tx }: { tx: Transaction }) {
         )}
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ fontFamily: fonts.monoMedium, color: income ? colors.green : colors.coral }}>
+        <Text style={{ fontFamily: fonts.medium, color: income ? colors.green : colors.coral }}>
           {income ? '+' : '−'}{formatCents(tx.amountArsCents)}
         </Text>
         {tx.currency !== 'ARS' && (

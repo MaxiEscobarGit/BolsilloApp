@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, View } from 'react-native';
 
 import { deudasError, money, today } from '@/components/deudas/shared';
 import { categoryIcon, Chip, haptic, type Category } from '@/components/movimientos/shared';
-import { AmountField, Button, DateField, Field, Text } from '@/components/ui';
+import { AmountField, Button, DateField, Field, FormScreen, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
@@ -65,74 +64,65 @@ export default function NuevaCompra() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        {/* iOS: the ScrollView insets itself for the keyboard; Android resizes the window. */}
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxl, gap: space.lg }}>
-          <Text variant="title">Compra en cuotas</Text>
+    <FormScreen>
+      <Text variant="title">Compra en cuotas</Text>
 
-          <Field
-            label="¿Qué compraste?"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Ej: heladera"
-            autoFocus
-            error={tried ? invalid.description || undefined : undefined}
-          />
+      <Field
+        label="¿Qué compraste?"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Ej: heladera"
+        autoFocus
+        error={tried ? invalid.description || undefined : undefined}
+      />
 
-          <AmountField
-            label={`Monto total (${currency})`}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0,00"
-            error={tried ? invalid.amount || undefined : undefined}
-          />
+      <AmountField
+        label={`Monto total (${currency})`}
+        value={amount}
+        onChangeText={setAmount}
+        placeholder="0,00"
+        error={tried ? invalid.amount || undefined : undefined}
+      />
 
-          <View style={{ gap: space.sm }}>
-            <Text variant="label">Moneda</Text>
-            <View style={{ flexDirection: 'row', gap: space.sm }}>
-              {(['ARS', 'USD'] as const).map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
-            </View>
+      <View style={{ gap: space.sm }}>
+        <Text variant="label">Moneda</Text>
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          {(['ARS', 'USD'] as const).map((c) => <Chip key={c} label={c} selected={currency === c} onPress={() => setCurrency(c)} />)}
+        </View>
+      </View>
+
+      <Field
+        label="Cuotas"
+        value={installments}
+        onChangeText={setInstallments}
+        keyboardType="number-pad"
+        error={tried ? invalid.installments || undefined : undefined}
+      />
+      {value > 0 && nValid ? (
+        <Text variant="small" style={{ color: colors.textMuted }}>
+          {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor((value * 100) / n), currency)}
+        </Text>
+      ) : null}
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="label">Categoría</Text>
+        {!categories ? (
+          <ActivityIndicator color={colors.green} accessibilityLabel="Cargando categorías" />
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+            {categories.map((c) => (
+              <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+            ))}
           </View>
+        )}
+        {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
+      </View>
 
-          <Field
-            label="Cuotas"
-            value={installments}
-            onChangeText={setInstallments}
-            keyboardType="number-pad"
-            error={tried ? invalid.installments || undefined : undefined}
-          />
-          {value > 0 && nValid ? (
-            <Text variant="small" style={{ color: colors.textMuted }}>
-              {n} {n === 1 ? 'cuota' : 'cuotas'} de {money(Math.floor((value * 100) / n), currency)}
-            </Text>
-          ) : null}
+      <DateField label="Fecha" value={date} onChange={setDate} />
 
-          <View style={{ gap: space.sm }}>
-            <Text variant="label">Categoría</Text>
-            {!categories ? (
-              <ActivityIndicator color={colors.green} accessibilityLabel="Cargando categorías" />
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-                {categories.map((c) => (
-                  <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
-                ))}
-              </View>
-            )}
-            {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
-          </View>
+      {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
 
-          <DateField label="Fecha" value={date} onChange={setDate} />
-
-          {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
-
-          <Button title="Guardar compra" loading={saving} onPress={save} />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+      <Button title="Guardar compra" loading={saving} onPress={save} />
+    </FormScreen>
   );
 }

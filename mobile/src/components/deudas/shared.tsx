@@ -62,7 +62,7 @@ export function Segmented<T extends string>({
               borderRadius: radius.md - 2,
               backgroundColor: active ? colors.surfaceHigh : 'transparent',
             }}>
-            <Text variant="label" style={{ fontFamily: fonts.monoMedium, color: active ? colors.text : colors.textMuted }}>
+            <Text variant="label" style={{ fontFamily: fonts.medium, fontSize: 13, color: active ? colors.text : colors.textMuted }}>
               {o.label}
             </Text>
           </Pressable>
