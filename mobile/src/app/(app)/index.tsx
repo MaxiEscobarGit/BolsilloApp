@@ -70,10 +70,10 @@ export default function Inicio() {
         {error ? <Text style={{ color: colors.coral }}>{error}</Text> : null}
 
         <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Stat highlight value={summary ? formatCents(summary.balanceCents) : '—'} caption={(summary?.balanceCents ?? 0) < 0 ? 'Gastaste más\nde lo que entró' : 'Te queda\neste mes'} />
+          <Stat highlight color={colors.text} value={summary ? formatCents(summary.balanceCents) : '—'} caption={(summary?.balanceCents ?? 0) < 0 ? 'Gastaste más\nde lo que entró' : 'Te queda\neste mes'} />
         </View>
         <View style={{ flexDirection: 'row', gap: space.md }}>
-          <Stat value={summary ? formatCents(summary.totalIncomeCents) : '—'} caption={'Entró\neste mes'} />
+          <Stat value={summary ? formatCents(summary.totalIncomeCents) : '—'} caption={'Entró\neste mes'} color={colors.green} />
           <Stat value={summary ? formatCents(summary.totalExpenseCents) : '—'} caption={'Salió\neste mes'} color={colors.coral} />
         </View>
         <View style={{ flexDirection: 'row', gap: space.md }}>
