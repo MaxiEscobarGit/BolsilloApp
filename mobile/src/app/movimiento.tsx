@@ -1,10 +1,9 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
+import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
 import { Button, Field, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { colors, space } from '@/theme';
@@ -12,10 +11,10 @@ import { colors, space } from '@/theme';
 // "12.000,50" (es-AR) or "12000.50" → 12000.5. With a comma, dots are thousands separators.
 const parseAmount = (s: string) => Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
 
-// Add (no id) or edit (?id=) a transaction. A short, abandonable task: native form sheet (animate-expo).
+// Add (no id) or edit (?id=) a transaction. A short, abandonable task: native form sheet (animate-expo),
+// configured in app/_layout.tsx.
 export default function MovimientoSheet() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const reduced = useReducedMotion();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loaded, setLoaded] = useState(!id);
   const [amount, setAmount] = useState('');
@@ -100,15 +99,6 @@ export default function MovimientoSheet() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Stack.Screen
-        options={{
-          presentation: 'formSheet',
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          animation: reduced ? 'fade' : 'default',
-          contentStyle: { backgroundColor: colors.bg },
-        }}
-      />
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
         {!loaded ? (
           error ? (
@@ -168,7 +158,7 @@ export default function MovimientoSheet() {
               <Text variant="label">Categoría</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
                 {categories.filter((c) => txType === 'DEBT' || c.type === txType).map((c) => (
-                  <Chip key={c.id} label={`${c.emoji ?? ''} ${c.name}`.trim()} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+                  <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
                 ))}
               </View>
               {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}

@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { Alert, Platform, Pressable, Text as RNText } from 'react-native';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import { Alert, Platform, Pressable, Text as RNText, View } from 'react-native';
 
 import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
@@ -24,7 +25,28 @@ export type Transaction = {
 };
 
 // Mirrors api/.../categories/dto/CategoryResponse.java.
-export type Category = { id: string; name: string; emoji: string | null; type: 'EXPENSE' | 'INCOME' };
+export type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME' };
+
+// SF Symbol on iOS, Material Symbol on Android and web, keyed by the system category names
+// seeded in api/.../V1__crear_tablas_base.sql. The API's emoji is not shown; user categories get a generic tag.
+export type Icon = Extract<SymbolViewProps['name'], object>;
+const sym = (ios: Icon['ios'], android: Icon['android']): Icon => ({ ios, android, web: android });
+const categoryIcons: Record<string, Icon> = {
+  Comida: sym('fork.knife', 'restaurant'),
+  Supermercado: sym('cart', 'shopping_cart'),
+  Transporte: sym('bus', 'directions_bus'),
+  Salud: sym('pills', 'medication'),
+  Entretenimiento: sym('gamecontroller', 'sports_esports'),
+  Servicios: sym('lightbulb', 'lightbulb'),
+  Ropa: sym('tshirt', 'checkroom'),
+  Educacion: sym('book', 'menu_book'),
+  Otros: sym('shippingbox', 'inventory_2'),
+  Sueldo: sym('briefcase', 'work'),
+  Freelance: sym('laptopcomputer', 'laptop'),
+  Inversiones: sym('chart.line.uptrend.xyaxis', 'trending_up'),
+  'Otros ingresos': sym('banknote', 'payments'),
+};
+export const categoryIcon = (name: string): Icon => categoryIcons[name] ?? sym('tag', 'sell');
 
 // Local date as YYYY-MM-DD (toISOString would shift to UTC and change the day at night).
 export const isoDate = (d: Date) =>
@@ -62,7 +84,8 @@ export function confirmDestructive(title: string, message: string, action: strin
 }
 
 // Pill toggle for filters and segmented choices. Selection is instant (tens of times a day: no animation).
-export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+export function Chip({ label, icon, selected, onPress }: { label: string; icon?: Icon; selected: boolean; onPress: () => void }) {
+  const color = selected ? colors.green : colors.textMuted;
   return (
     <Pressable
       onPress={() => { haptic.select(); onPress(); }}
@@ -77,7 +100,10 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
         backgroundColor: selected ? 'rgba(0, 255, 133, 0.12)' : colors.surface,
         opacity: pressed ? 0.7 : 1,
       })}>
-      <RNText style={[type.small, { fontFamily: fonts.medium, color: selected ? colors.green : colors.textMuted }]}>{label}</RNText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+        {icon && <SymbolView name={icon} size={16} tintColor={color} />}
+        <RNText style={[type.small, { fontFamily: fonts.medium, color }]}>{label}</RNText>
+      </View>
     </Pressable>
   );
 }

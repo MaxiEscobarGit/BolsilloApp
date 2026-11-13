@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { SessionProvider, useSession } from '@/lib/session';
 import { colors } from '@/theme';
@@ -26,6 +27,7 @@ export default function RootLayout() {
 
 function Routes() {
   const { user, restoring } = useSession();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (!restoring) SplashScreen.hideAsync();
@@ -37,7 +39,12 @@ function Routes() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(app)" />
-        <Stack.Screen name="movimiento" />
+        {/* Sheet options live here, not in the screen: changing `presentation` on a mounted
+            screen makes iOS dismiss and re-present it (the sheet opened and closed by itself). */}
+        <Stack.Screen
+          name="movimiento"
+          options={{ presentation: 'formSheet', sheetAllowedDetents: [1], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="login" />

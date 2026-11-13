@@ -3,7 +3,7 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, View } from 'react-native';
 
-import { Chip, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
+import { categoryIcon, Chip, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
@@ -59,7 +59,6 @@ export default function Movimientos() {
   };
   const isCurrentMonth = month.getFullYear() === new Date().getFullYear() && month.getMonth() === new Date().getMonth();
   const visibleCategories = categories.filter((c) => !txType || c.type === txType);
-  const emoji = (id: string) => categories.find((c) => c.id === id)?.emoji ?? '';
 
   return (
     <Screen style={{ paddingHorizontal: 0 }}>
@@ -94,7 +93,7 @@ export default function Movimientos() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.lg }}>
             <Chip label="Todas" selected={!categoryId} onPress={() => setCategoryId('')} />
             {visibleCategories.map((c) => (
-              <Chip key={c.id} label={`${c.emoji ?? ''} ${c.name}`.trim()} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+              <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
             ))}
           </ScrollView>
         )}
@@ -114,7 +113,7 @@ export default function Movimientos() {
           contentContainerStyle={{ paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.sm, flexGrow: 1 }}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
-          renderItem={({ item }) => <Row tx={item} emoji={emoji(item.categoryId)} />}
+          renderItem={({ item }) => <Row tx={item} />}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', gap: space.md, paddingTop: space.xl }}>
               <Text variant="heading">Nada por acá</Text>
@@ -152,7 +151,7 @@ function MonthArrow({ dir, disabled, onPress }: { dir: 'back' | 'forward'; disab
   );
 }
 
-function Row({ tx, emoji }: { tx: Transaction; emoji: string }) {
+function Row({ tx }: { tx: Transaction }) {
   const income = tx.type === 'INCOME';
   const tags = [tx.source === 'CHAT' && 'Chat', tx.installmentNumber && `Cuota ${tx.installmentNumber}`].filter(Boolean) as string[];
   return (
@@ -166,9 +165,12 @@ function Row({ tx, emoji }: { tx: Transaction; emoji: string }) {
       })}>
       <View style={{ flex: 1, gap: 2 }}>
         <Text numberOfLines={1} style={{ fontFamily: fonts.medium }}>{tx.description}</Text>
-        <Text variant="small" numberOfLines={1} style={{ color: colors.textMuted }}>
-          {[`${emoji} ${tx.categoryName}`.trim(), shortDate(tx.transactionDate)].join(' · ')}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+          <SymbolView name={categoryIcon(tx.categoryName)} size={14} tintColor={colors.textMuted} />
+          <Text variant="small" numberOfLines={1} style={{ color: colors.textMuted }}>
+            {tx.categoryName} · {shortDate(tx.transactionDate)}
+          </Text>
+        </View>
         {tags.length > 0 && (
           <View style={{ flexDirection: 'row', gap: space.xs, marginTop: 2 }}>
             {tags.map((t) => (
