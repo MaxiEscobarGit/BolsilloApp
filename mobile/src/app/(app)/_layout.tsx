@@ -1,22 +1,43 @@
+import { BlurView } from 'expo-blur';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { Pressable, View, type PressableProps } from 'react-native';
+import { Platform, Pressable, View, type PressableProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, size, space } from '@/theme';
 
 type Icon = SymbolViewProps['name'];
 
+const isIOS = Platform.OS === 'ios';
+
 // Bottom bar with a raised center action (Lemon Cash style). Headless expo-router tabs:
 // NativeTabs can't render a center button and draws on top on web. Tabs don't animate between each other.
 export default function AppTabs() {
   const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom, space.md);
   return (
     <Tabs style={{ flex: 1, backgroundColor: colors.bg }}>
       <TabSlot style={{ flex: 1 }} />
       {/* Floating pill with the four tabs, and the assistant as a separate button pinned to the right.
           Absolute over the slot so content scrolls behind it; box-none lets touches in the gaps reach that content.
           Screens add useBottomBarInset() of bottom padding so their last item clears it. */}
+      {/* iOS: the pill's glass sits behind the TabList (the tabs stay transparent), same box as the tabs. */}
+      {isIOS && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: space.md,
+            right: space.md + size.tabBar + space.sm,
+            bottom,
+            height: size.tabBar,
+            borderRadius: radius.pill,
+            overflow: 'hidden',
+          }}>
+          <Glass />
+        </View>
+      )}
       <TabList
         pointerEvents="box-none"
         style={{
@@ -27,7 +48,7 @@ export default function AppTabs() {
           flexDirection: 'row',
           alignItems: 'center',
           marginHorizontal: space.md,
-          paddingBottom: Math.max(insets.bottom, space.md),
+          paddingBottom: bottom,
           paddingTop: space.sm,
         }}>
         {/* Triggers must be direct children of TabList (that is how expo-router registers them),
@@ -53,6 +74,15 @@ export default function AppTabs() {
   );
 }
 
+// Liquid Glass on iOS 26+, the system chrome blur on older iOS. Android and web keep the tinted pill drawn by the tabs.
+function Glass() {
+  return isLiquidGlassAvailable() ? (
+    <GlassView glassEffectStyle="regular" colorScheme="dark" style={{ flex: 1 }} />
+  ) : (
+    <BlurView tint="systemChromeMaterialDark" intensity={70} style={{ flex: 1 }} />
+  );
+}
+
 function Tab({ label, icon, edge, isFocused, ...props }: PressableProps & { isFocused?: boolean; label: string; icon: Icon; edge?: 'left' | 'right' }) {
   const color = isFocused ? colors.green : colors.textFaint;
   return (
@@ -65,17 +95,19 @@ function Tab({ label, icon, edge, isFocused, ...props }: PressableProps & { isFo
         gap: 4,
         minHeight: size.tabBar,
         justifyContent: 'center',
-        backgroundColor: colors.barFill,
-        borderColor: colors.line,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderLeftWidth: edge === 'left' ? 1 : 0,
-        borderRightWidth: edge === 'right' ? 1 : 0,
         marginRight: edge === 'right' ? space.sm : 0,
-        borderTopLeftRadius: edge === 'left' ? radius.pill : 0,
-        borderBottomLeftRadius: edge === 'left' ? radius.pill : 0,
-        borderTopRightRadius: edge === 'right' ? radius.pill : 0,
-        borderBottomRightRadius: edge === 'right' ? radius.pill : 0,
+        ...(!isIOS && {
+          backgroundColor: colors.barFill,
+          borderColor: colors.line,
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderLeftWidth: edge === 'left' ? 1 : 0,
+          borderRightWidth: edge === 'right' ? 1 : 0,
+          borderTopLeftRadius: edge === 'left' ? radius.pill : 0,
+          borderBottomLeftRadius: edge === 'left' ? radius.pill : 0,
+          borderTopRightRadius: edge === 'right' ? radius.pill : 0,
+          borderBottomRightRadius: edge === 'right' ? radius.pill : 0,
+        }),
       }}>
       <SymbolView name={icon} size={26} tintColor={color} />
     </Pressable>
