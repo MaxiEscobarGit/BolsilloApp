@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 import { Text } from '@/components/ui';
 import { ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
+import { isoDate } from '@/lib/dates';
 import { formatCents } from '@/lib/money';
 import { colors, fonts, radius, space } from '@/theme';
 
@@ -12,18 +13,10 @@ import { colors, fonts, radius, space } from '@/theme';
 export const money = (cents: number, currency = 'ARS') =>
   currency === 'ARS' ? formatCents(cents) : formatCents(cents).replace('$', currency === 'USD' ? 'US$' : currency);
 
-// Local date as YYYY-MM-DD (toISOString would shift it to UTC).
-export const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+export { formatDate } from '@/lib/dates';
+export const today = () => isoDate(new Date());
 
 export const daysUntil = (date: string) => Math.round((Date.parse(date) - Date.parse(today())) / 86_400_000);
-
-export const formatDate = (date: string) => {
-  const [y, m, d] = date.split('-');
-  return `${d}/${m}/${y}`;
-};
 
 // Codes the debts/purchases endpoints add on top of lib/errors.ts.
 const codes: Record<string, string> = {
@@ -89,5 +82,3 @@ export function Notice({ title, body, children }: { title: string; body?: string
     </View>
   );
 }
-
-export const isDate = (text: string) => /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text));

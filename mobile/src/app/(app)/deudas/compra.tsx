@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { deudasError, isDate, money, today } from '@/components/deudas/shared';
+import { deudasError, money, today } from '@/components/deudas/shared';
 import { categoryIcon, Chip, haptic, type Category } from '@/components/movimientos/shared';
-import { AmountField, Button, Field, Text } from '@/components/ui';
+import { AmountField, Button, DateField, Field, Text } from '@/components/ui';
 import { api } from '@/lib/api';
 import { parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
@@ -39,7 +39,6 @@ export default function NuevaCompra() {
     amount: !(value > 0) && 'Ingresá un monto mayor a cero.',
     installments: !nValid && 'Entre 1 y 60.',
     category: !categoryId && 'Elegí una categoría.',
-    date: !isDate(date) && 'Usá el formato AAAA-MM-DD.',
   };
 
   const save = async () => {
@@ -127,14 +126,7 @@ export default function NuevaCompra() {
             {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
           </View>
 
-          <Field
-            label="Fecha"
-            value={date}
-            onChangeText={setDate}
-            placeholder="AAAA-MM-DD"
-            autoCapitalize="none"
-            error={tried ? invalid.date || undefined : undefined}
-          />
+          <DateField label="Fecha" value={date} onChange={setDate} />
 
           {error ? <Text accessibilityRole="alert" style={{ color: colors.coral }}>{error}</Text> : null}
 

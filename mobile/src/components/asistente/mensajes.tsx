@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { Card, Text } from '@/components/ui';
+import { formatDate } from '@/lib/dates';
 import { formatCents } from '@/lib/money';
 import { colors, radius, space } from '@/theme';
 
@@ -111,6 +112,3 @@ const money = (amount: number, currency: string) =>
   currency === 'ARS'
     ? formatCents(Math.round(amount * 100))
     : new Intl.NumberFormat('es-AR', { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount);
-
-const formatDate = (iso: string) =>
-  new Date(iso + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
