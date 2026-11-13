@@ -6,6 +6,11 @@ import { Platform } from 'react-native';
 // On a physical phone, localhost is the phone itself: set EXPO_PUBLIC_API_URL=http://<LAN-IP>:8080.
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
+// Release builds must reach the API over TLS; plain http only makes sense on a LAN while developing.
+if (!__DEV__ && !API_URL.startsWith('https://')) {
+  throw new Error('EXPO_PUBLIC_API_URL debe ser https:// en builds de release');
+}
+
 const REFRESH_KEY = 'bolsillo.refresh';
 
 export type AuthResponse = {
