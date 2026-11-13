@@ -162,6 +162,7 @@ export function FormScreen({ children }: { children: ReactNode }) {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
         <ScrollView
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           automaticallyAdjustKeyboardInsets
@@ -286,7 +287,7 @@ export function Select<T extends string>({
       </Labeled>
 
       <Sheet open={open} onClose={close} label={label}>
-        <ScrollView accessibilityRole="radiogroup">
+        <ScrollView accessibilityRole="radiogroup" showsVerticalScrollIndicator={false}>
           {options.map((o) => {
             const selected = o.value === value;
             const color = selected ? colors.green : colors.text;

@@ -60,6 +60,7 @@ export default function Deudas() {
       />
 
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: space.md, paddingBottom: bottomInset, gap: space.md }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.green} />}>
         {current.loading && !current.data ? (
