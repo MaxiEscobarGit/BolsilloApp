@@ -31,7 +31,8 @@ export default function AppTabs() {
           paddingTop: space.sm,
         }}>
         {/* Triggers must be direct children of TabList (that is how expo-router registers them),
-            so the pill is drawn by the tabs themselves: surface background, rounded ends. */}
+            so the pill is drawn by the tabs themselves: translucent dark fill, rounded ends, and a 1pt line
+            (top and bottom on every tab, plus the outer side on the first and last) that reads as one outline. */}
         <TabTrigger name="index" href="/" asChild>
           <Tab label="Inicio" edge="left" icon={{ ios: 'house.fill', android: 'home', web: 'home' }} />
         </TabTrigger>
@@ -64,7 +65,12 @@ function Tab({ label, icon, edge, isFocused, ...props }: PressableProps & { isFo
         gap: 4,
         minHeight: size.tabBar,
         justifyContent: 'center',
-        backgroundColor: colors.surface,
+        backgroundColor: colors.barFill,
+        borderColor: colors.line,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderLeftWidth: edge === 'left' ? 1 : 0,
+        borderRightWidth: edge === 'right' ? 1 : 0,
         marginRight: edge === 'right' ? space.sm : 0,
         borderTopLeftRadius: edge === 'left' ? radius.pill : 0,
         borderBottomLeftRadius: edge === 'left' ? radius.pill : 0,
