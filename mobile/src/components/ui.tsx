@@ -198,9 +198,10 @@ const RevealInput = createContext<(input: HostInstance | null | undefined) => vo
 
 // Scrollable form inside a native form sheet (detent 1: it does not move for the keyboard, and
 // automaticallyAdjustKeyboardInsets / KeyboardAvoidingView left it blank or compensated twice). Instead the
-// keyboard height, measured by Reanimated, becomes the padding of the wrapper around ScrollView + `footer`
-// (the save button): the footer rides right above the keyboard and the ScrollView shrinks. The wrapper sits
-// inside the SafeAreaView, which already pads the bottom inset, so only the excess is added.
+// keyboard height, measured by Reanimated, becomes the padding of the wrapper around the ScrollView, which
+// shrinks. The `footer` (the save button) is the last child of the scroll content, not fixed: it only shows
+// when scrolled to the bottom. The wrapper sits inside the SafeAreaView, which already pads the bottom
+// inset, so only the excess is added.
 // shortcut: useAnimatedKeyboard is deprecated in Reanimated 4.7 (web: no-op); move to react-native-keyboard-controller when needed.
 export function FormScreen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -234,10 +235,10 @@ export function FormScreen({ children, footer }: { children: ReactNode; footer?:
               onScroll={(e) => { view.current.y = e.nativeEvent.contentOffset.y; }}
               // The viewport shrinks frame by frame while the keyboard rises: keep the focused field in view.
               onLayout={(e) => { view.current.height = e.nativeEvent.layout.height; reveal(TextInput.State.currentlyFocusedInput()); }}
-              contentContainerStyle={{ padding: space.lg, paddingBottom: footer ? space.md : space.xxl, gap: space.lg }}>
+              contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl, gap: space.lg }}>
               {children}
+              {footer ? <View style={{ marginTop: space.lg, gap: space.xs }}>{footer}</View> : null}
             </ScrollView>
-            {footer ? <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm, gap: space.xs }}>{footer}</View> : null}
           </Animated.View>
         </SafeAreaView>
       </View>
