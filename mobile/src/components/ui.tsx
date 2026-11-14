@@ -3,13 +3,14 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, type ComponentRef, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import {
   Modal,
   Pressable,
   Text as RNText,
   ScrollView,
   TextInput,
+  type HostInstance,
   View,
   type PressableProps,
   type StyleProp,
@@ -17,7 +18,7 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import Animated, { cubicBezier, FadeIn, FadeOut, LinearTransition, SlideInDown, useReducedMotion } from 'react-native-reanimated';
+import Animated, { cubicBezier, FadeIn, FadeOut, LinearTransition, SlideInDown, useAnimatedKeyboard, useAnimatedStyle, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatDate, isoDate } from '@/lib/dates';
@@ -192,25 +193,55 @@ function Labeled({ label, error, children }: { label: string; error?: string; ch
   );
 }
 
-// Scrollable form inside a native form sheet. iOS moves the sheet itself for the keyboard and the ScrollView
-// insets its content (automaticallyAdjustKeyboardInsets); a KeyboardAvoidingView on top compensated a second
-// time and left the sheet blank. Android resizes the window. `footer` (the save button) sits outside the
-// ScrollView so it is always visible; the SafeAreaView gives it the bottom inset as padding.
+// Reveals a focused input inside the FormScreen's ScrollView (no-op outside one).
+const RevealInput = createContext<(input: HostInstance | null | undefined) => void>(() => {});
+
+// Scrollable form inside a native form sheet (detent 1: it does not move for the keyboard, and
+// automaticallyAdjustKeyboardInsets / KeyboardAvoidingView left it blank or compensated twice). Instead the
+// keyboard height, measured by Reanimated, becomes the padding of the wrapper around ScrollView + `footer`
+// (the save button): the footer rides right above the keyboard and the ScrollView shrinks. The wrapper sits
+// inside the SafeAreaView, which already pads the bottom inset, so only the excess is added.
+// shortcut: useAnimatedKeyboard is deprecated in Reanimated 4.7 (web: no-op); move to react-native-keyboard-controller when needed.
 export function FormScreen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const keyboard = useAnimatedKeyboard({ isStatusBarTranslucentAndroid: true, isNavigationBarTranslucentAndroid: true });
+  const avoid = useAnimatedStyle(() => ({ paddingBottom: Math.max(keyboard.height.get() - insets.bottom, 0) }));
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const view = useRef({ y: 0, height: 0 });
+
+  // Scrolls just enough for the input to sit fully inside the (shrunken) viewport.
+  const reveal = (input: HostInstance | null | undefined) => {
+    const inner = scroll.current?.getInnerViewRef();
+    if (!input || !inner) return;
+    input.measureLayout(inner, (_x, y, _w, height) => {
+      const { y: top, height: visible } = view.current;
+      if (y < top + space.md) scroll.current?.scrollTo({ y: y - space.md, animated: false });
+      else if (y + height > top + visible - space.md) scroll.current?.scrollTo({ y: y + height - visible + space.md, animated: false });
+    });
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{ padding: space.lg, paddingBottom: footer ? space.md : space.xxl, gap: space.lg }}>
-          {children}
-        </ScrollView>
-        {footer ? <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm, gap: space.xs }}>{footer}</View> : null}
-      </SafeAreaView>
-    </View>
+    <RevealInput.Provider value={reveal}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+          <Animated.View style={[{ flex: 1 }, avoid]}>
+            <ScrollView
+              ref={scroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              scrollEventThrottle={16}
+              onScroll={(e) => { view.current.y = e.nativeEvent.contentOffset.y; }}
+              // The viewport shrinks frame by frame while the keyboard rises: keep the focused field in view.
+              onLayout={(e) => { view.current.height = e.nativeEvent.layout.height; reveal(TextInput.State.currentlyFocusedInput()); }}
+              contentContainerStyle={{ padding: space.lg, paddingBottom: footer ? space.md : space.xxl, gap: space.lg }}>
+              {children}
+            </ScrollView>
+            {footer ? <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.sm, gap: space.xs }}>{footer}</View> : null}
+          </Animated.View>
+        </SafeAreaView>
+      </View>
+    </RevealInput.Provider>
   );
 }
 
@@ -250,14 +281,17 @@ export function Disclosure({ label = 'Más opciones', defaultOpen, reveal, child
 
 export function Field({ label, error, onFocus, onBlur, ...props }: TextInputProps & { label: string; error?: string }) {
   const [focused, setFocused] = useState(false);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  const reveal = useContext(RevealInput);
   return (
     <Labeled label={label} error={error}>
       <TextInput
+        ref={input}
         placeholderTextColor={colors.textFaint}
         selectionColor={colors.green}
         accessibilityLabel={label}
         {...props}
-        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onFocus={(e) => { setFocused(true); reveal(input.current); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={[type.body, inputBox(error, focused), { color: colors.text }, props.style]}
       />
