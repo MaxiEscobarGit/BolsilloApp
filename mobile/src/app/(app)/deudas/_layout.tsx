@@ -1,14 +1,14 @@
 import { Stack } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { colors } from '@/theme';
+import { colors, size } from '@/theme';
 
 // Own stack so the forms can be real native form sheets (animate-expo: a sheet that is its own screen).
 export default function DeudasLayout() {
   const reduced = useReducedMotion();
   const sheet = {
     presentation: 'formSheet',
-    sheetAllowedDetents: [1] as number[],
+    sheetAllowedDetents: [size.formSheet] as number[],
     sheetGrabberVisible: true,
     contentStyle: { backgroundColor: colors.bg },
     animation: reduced ? 'fade' : 'default',

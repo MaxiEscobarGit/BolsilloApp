@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { SessionProvider, useSession } from '@/lib/session';
-import { colors } from '@/theme';
+import { colors, size } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,7 +42,7 @@ function Routes() {
             screen makes iOS dismiss and re-present it (the sheet opened and closed by itself). */}
         <Stack.Screen
           name="movimiento"
-          options={{ presentation: 'formSheet', sheetAllowedDetents: [1], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
+          options={{ presentation: 'formSheet', sheetAllowedDetents: [size.formSheet], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
         />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
