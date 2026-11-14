@@ -3,12 +3,13 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { createContext, useContext, useRef, useState, type ComponentRef, type ComponentType, type ReactElement, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ComponentRef, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import {
   Modal,
   Pressable,
   Text as RNText,
   ScrollView,
+  StyleSheet,
   TextInput,
   type HostInstance,
   View,
@@ -18,8 +19,10 @@ import {
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import Animated, { cubicBezier, FadeIn, FadeOut, LinearTransition, SlideInDown, useAnimatedKeyboard, useAnimatedStyle, useReducedMotion } from 'react-native-reanimated';
+import { GestureDetector, GestureHandlerRootView, usePanGesture } from 'react-native-gesture-handler';
+import Animated, { cubicBezier, Extrapolation, FadeIn, FadeOut, interpolate, LinearTransition, SlideInDown, useAnimatedKeyboard, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { formatDate, isoDate } from '@/lib/dates';
 import { GlassFill, useGlass } from '@/lib/glass';
@@ -377,38 +380,96 @@ export type SelectOption<T extends string> = { value: T; label: string; icon?: S
 
 // Bottom sheet shared by Select and DateField. Opened a few times a day (animate-expo: occasional tier),
 // so it gets a short fade + slide; none under reduced motion.
+// Where a flick would come to rest, and resistance past an edge (animate-expo RECIPES: shared worklets).
+function project(velocity: number, decelerationRate = 0.998) {
+  'worklet';
+  return ((velocity / 1000) * decelerationRate) / (1 - decelerationRate);
+}
+function rubberband(overshoot: number, dimension: number, constant = 0.55) {
+  'worklet';
+  return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
+}
+
+const snapHaptic = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+};
+
 function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () => void; label: string; children: ReactNode }) {
   const reduced = useReducedMotion();
   const insets = useSafeAreaInsets();
   const glass = useGlass();
+  // Drag to dismiss from the grabber area (animate-expo RECIPES: bottom sheet). The card follows the finger 1:1,
+  // resists upward, and on release the projected landing point decides: past 40% of its height it leaves, else it snaps home.
+  const y = useSharedValue(0);
+  const start = useSharedValue(0);
+  const h = useSharedValue(1);
+  useEffect(() => {
+    if (open) y.set(0);
+  }, [open, y]);
+  const pan = usePanGesture({
+    activeOffsetY: [-10, 10],
+    onActivate: () => {
+      start.set(y.get());
+    },
+    onUpdate: (e) => {
+      const next = start.get() + e.translationY;
+      y.set(next >= 0 ? next : rubberband(next, h.get()));
+    },
+    onDeactivate: (e) => {
+      if (y.get() + project(e.velocityY) > h.get() * 0.4) {
+        y.set(withSpring(h.get() + insets.bottom + space.lg, { ...motion.springDismiss, velocity: e.velocityY }, (done) => {
+          if (done) scheduleOnRN(onClose);
+        }));
+      } else {
+        y.set(withSpring(0, { ...motion.springSheet, velocity: e.velocityY }));
+        scheduleOnRN(snapHaptic);
+      }
+    },
+  });
+  const cardStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [0, h.get()], [1, 0], Extrapolation.CLAMP) }));
   return (
     <Modal visible={open} transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
-      <Animated.View
-        entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)}
-        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: glass === 'none' ? colors.scrim : colors.scrimLight }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
-        {/* Floating card (iOS 26 style): inset from the edges and the home indicator, every corner rounded, so the
-            screen behind shows around it and, on iOS, through the glass. */}
+      {/* Gestures inside a Modal need their own root (it renders outside the app's GestureHandlerRootView). */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View
-          entering={reduced ? undefined : SlideInDown.duration(motion.springSheet.duration).easing(motion.easeOut)}
-          style={{
-            maxHeight: '80%',
-            marginHorizontal: space.sm,
-            marginBottom: Math.max(insets.bottom, space.sm),
-            backgroundColor: glass === 'none' ? colors.surface : 'transparent',
-            overflow: 'hidden',
-            borderRadius: radius.sheet,
-            borderWidth: glass === 'none' ? 1 : 0,
-            borderColor: colors.line,
-            paddingTop: space.lg,
-            paddingBottom: space.md,
-          }}>
-          <GlassFill kind={glass} />
-          {/* Over the material the muted label loses legibility (§12 vibrancy). */}
-          <Text variant="label" style={{ paddingHorizontal: space.lg, paddingBottom: space.sm, color: glass === 'none' ? colors.textMuted : colors.text }}>{label}</Text>
-          {children}
-        </Animated.View>
-      </Animated.View>
+          entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)}
+          style={[StyleSheet.absoluteFill, { backgroundColor: glass === 'none' ? colors.scrim : colors.scrimLight }, scrimStyle]}
+        />
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
+          {/* Floating card (iOS 26 style): inset from the edges and the home indicator, every corner rounded, so the
+              screen behind shows around it and, on iOS, through the glass. Outer view: drag offset; inner: entrance. */}
+          <Animated.View style={[{ maxHeight: '80%' }, cardStyle]} onLayout={(e) => h.set(e.nativeEvent.layout.height)}>
+            <Animated.View
+              entering={reduced ? undefined : SlideInDown.duration(motion.springSheet.duration).easing(motion.easeOut)}
+              style={{
+                flexShrink: 1,
+                marginHorizontal: space.sm,
+                marginBottom: Math.max(insets.bottom, space.sm),
+                backgroundColor: glass === 'none' ? colors.surface : 'transparent',
+                overflow: 'hidden',
+                borderRadius: radius.sheet,
+                borderWidth: glass === 'none' ? 1 : 0,
+                borderColor: colors.line,
+                paddingBottom: space.md,
+              }}>
+              <GlassFill kind={glass} />
+              <GestureDetector gesture={pan}>
+                <View style={{ paddingTop: space.sm, paddingHorizontal: space.lg, paddingBottom: space.sm, gap: space.md }}>
+                  <View
+                    accessibilityLabel="Arrastrá hacia abajo para cerrar"
+                    style={{ alignSelf: 'center', width: 36, height: 5, borderRadius: 2.5, backgroundColor: colors.grabber }}
+                  />
+                  {/* Over the material the muted label loses legibility (§12 vibrancy). */}
+                  <Text variant="label" style={{ color: glass === 'none' ? colors.textMuted : colors.text }}>{label}</Text>
+                </View>
+              </GestureDetector>
+              {children}
+            </Animated.View>
+          </Animated.View>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
