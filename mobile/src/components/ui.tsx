@@ -1,8 +1,9 @@
+import MaskedViewNative from '@react-native-masked-view/masked-view';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import {
   Modal,
   Pressable,
@@ -57,16 +58,36 @@ export function useBottomBarInset() {
   return space.sm + size.tabBar + Math.max(bottom, space.md) + space.md;
 }
 
+// Its bundled types are a class mixin that React 19's JSX typing rejects, so type it as a plain component.
+const MaskedView = MaskedViewNative as unknown as ComponentType<{ style?: StyleProp<ViewStyle>; maskElement: ReactElement; children?: ReactNode }>;
+
+// Scroll edge (apple-design §12): content fades out under the status bar / header. On iOS one BlurView is masked by a
+// gradient (full blur down to `solidUntil`, dissolving continuously to `height`); elsewhere just the gradient to the canvas.
+function ScrollEdge({ height, solidUntil, glass }: { height: number; solidUntil: number; glass: ReturnType<typeof useGlass> }) {
+  const locations: [number, number] = [solidUntil / height, 1];
+  const fill = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height }}>
+      {glass !== 'none' && (
+        <MaskedView
+          style={fill}
+          maskElement={<LinearGradient colors={['#000', 'transparent']} locations={locations} style={{ flex: 1 }} />}>
+          <BlurView tint="dark" intensity={40} style={{ flex: 1 }} />
+        </MaskedView>
+      )}
+      <LinearGradient colors={[colors.bg, colors.bgClear]} locations={locations} style={fill} />
+    </View>
+  );
+}
+
 // Full-screen canvas with the reference site's green glow bleeding from the top. Content runs edge to edge and
-// scrolls under the status bar and the optional floating `header`; a scroll edge (apple-design §12) fades it out:
-// progressive blur on iOS (stacked BlurViews, no masks), plain gradient to the canvas elsewhere.
+// scrolls under the status bar and the optional floating `header`, with a `ScrollEdge` over that chrome only.
 // `children` may be a function receiving the top inset (status bar + measured header + space.md): the scroll content's paddingTop.
 export function Screen({ children, header, style }: { children: ReactNode | ((topInset: number) => ReactNode); header?: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { top } = useSafeAreaInsets();
   const glass = useGlass();
   const [headerH, setHeaderH] = useState(0);
   const chrome = header ? headerH || top : top; // status bar + header, as measured
-  const fade = chrome + space.xl;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View
@@ -77,13 +98,7 @@ export function Screen({ children, header, style }: { children: ReactNode | ((to
         }}
       />
       <View style={[{ flex: 1, paddingHorizontal: space.lg }, style]}>{typeof children === 'function' ? children(chrome + space.md) : children}</View>
-      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: fade }}>
-        {glass !== 'none' && [0, 0.33, 0.66].map((k) => (
-          <BlurView key={k} tint="dark" intensity={20} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: fade - space.xl * k }} />
-        ))}
-        {/* Solid behind the header so it reads; with no header it fades from the very top and the blur shows through. */}
-        <LinearGradient colors={[colors.bg, colors.bgClear]} locations={[header ? chrome / fade : 0, 1]} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-      </View>
+      {chrome > 0 && <ScrollEdge height={chrome} solidUntil={header ? Math.max(chrome - space.lg, 0) : 0} glass={glass} />}
       {header ? (
         <View
           pointerEvents="box-none"
