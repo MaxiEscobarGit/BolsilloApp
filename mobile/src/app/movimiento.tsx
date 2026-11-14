@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
+import { GuardadoAnimacion } from '@/components/movimientos/GuardadoAnimacion';
 import { Segmented } from '@/components/deudas/shared';
 import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, lastCategory, txError, type Category, type Transaction } from '@/components/movimientos/shared';
 import { AmountField, AmountHero, Button, DateField, Disclosure, Field, FormScreen, Text, type Currency } from '@/components/ui';
@@ -25,6 +26,7 @@ export default function MovimientoSheet() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [tried, setTried] = useState(false);
+  const [saved, setSaved] = useState<number>();
 
   useEffect(() => {
     api.get<Category[]>('/api/categories').then(setCategories).catch((e) => setError(txError(e)));
@@ -73,8 +75,12 @@ export default function MovimientoSheet() {
     try {
       await (id ? api.patch(`/api/transactions/${id}`, body) : api.post('/api/transactions', body));
       lastCategory[txType] = picked;
-      haptic.success();
-      router.back();
+      if (id) {
+        haptic.success();
+        router.back();
+      } else {
+        setSaved(Math.round(value * 100)); // the overlay plays the success haptic and closes the sheet
+      }
     } catch (e) {
       haptic.error();
       setError(txError(e));
@@ -117,6 +123,7 @@ export default function MovimientoSheet() {
   ) : undefined;
 
   return (
+    <View style={{ flex: 1 }}>
     <FormScreen footer={footer}>
       {!loaded ? (
         error ? (
@@ -180,5 +187,7 @@ export default function MovimientoSheet() {
         </>
       )}
     </FormScreen>
+    {saved !== undefined && <GuardadoAnimacion cents={saved} type={txType} onDone={() => router.back()} />}
+    </View>
   );
 }

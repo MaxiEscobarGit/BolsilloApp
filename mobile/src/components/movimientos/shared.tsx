@@ -70,6 +70,7 @@ export const txError = (e: unknown) => (e instanceof ApiError && codes[e.code]) 
 export const haptic = {
   success: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}),
   error: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}),
+  impact: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}),
   select: () => Haptics.selectionAsync().catch(() => {}),
 };
 
