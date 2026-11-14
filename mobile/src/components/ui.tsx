@@ -390,6 +390,10 @@ function rubberband(overshoot: number, dimension: number, constant = 0.55) {
   return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
 }
 
+const closeAfter = (onClose: () => void) => {
+  setTimeout(onClose, motion.springDismiss.duration);
+};
+
 const snapHaptic = () => {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 };
@@ -417,9 +421,10 @@ function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () 
     },
     onDeactivate: (e) => {
       if (y.get() + project(e.velocityY) > h.get() * 0.4) {
-        y.set(withSpring(h.get() + insets.bottom + space.lg, { ...motion.springDismiss, velocity: e.velocityY }, (done) => {
-          if (done) scheduleOnRN(onClose);
-        }));
+        // Close on a JS timer matching the spring rather than in its completion callback: on web the callback never
+        // reported `finished`, which left the card off screen with the modal still open.
+        y.set(withSpring(h.get() + insets.bottom + space.lg, { ...motion.springDismiss, velocity: e.velocityY }));
+        scheduleOnRN(closeAfter, onClose);
       } else {
         y.set(withSpring(0, { ...motion.springSheet, velocity: e.velocityY }));
         scheduleOnRN(snapHaptic);
@@ -432,10 +437,10 @@ function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () 
     <Modal visible={open} transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
       {/* Gestures inside a Modal need their own root (it renders outside the app's GestureHandlerRootView). */}
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Animated.View
-          entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)}
-          style={[StyleSheet.absoluteFill, { backgroundColor: glass === 'none' ? colors.scrim : colors.scrimLight }, scrimStyle]}
-        />
+        {/* Entrance fade on the wrapper, drag-driven opacity on the child: one view can't hold both. */}
+        <Animated.View entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)} style={StyleSheet.absoluteFill}>
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: glass === 'none' ? colors.scrim : colors.scrimLight }, scrimStyle]} />
+        </Animated.View>
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
           {/* Floating card (iOS 26 style): inset from the edges and the home indicator, every corner rounded, so the
