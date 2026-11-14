@@ -49,7 +49,7 @@ src/
 
 ## Diseño
 
-Referencia visual: tibdigital.com. Lienzo casi negro (`#0A0C10`), superficies `#141B23`, acento verde
+Referencia visual: tibdigital.com. Lienzo casi negro (`#0A0C10`), superficies `#0F141A`, acento verde
 neón `#00FF85` (con un resplandor radial arriba de cada pantalla), coral `#FF6B50` para gastos, deudas y
 errores. Títulos en Geist con tracking negativo; etiquetas en **Geist semibold en mayúsculas** (variante `label`); una sola familia, la jerarquía va por grosor y tamaño.
 Usá siempre los tokens de `src/theme.ts`; si falta uno, agregalo ahí, no hardcodees.
