@@ -19,6 +19,9 @@ export const colors = {
   grabber: 'rgba(244, 246, 245, 0.3)', // drag handle at the top of a sheet
   scrimLight: 'rgba(10, 12, 16, 0.3)', // behind glass sheets: lighter, so the screen still reads through the glass
   barFill: 'rgba(10, 12, 16, 0.88)', // floating tab pill: bg at 88%, so cards scrolling behind only hint through
+  wallet: '#2B3846', // wallet body in the save animation: lighter than surfaceHigh so it reads on bg
+  walletFlap: '#394959', // its flap, a step lighter than the body
+  seam: 'rgba(233, 236, 235, 0.32)', // dashed stitching and wallet edges
   barSelect: 'rgba(244, 246, 245, 0.14)', // selection capsule over the pill, under the active tab's icon
 } as const;
 
