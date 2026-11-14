@@ -102,7 +102,7 @@ export default function Inicio() {
                     <Text variant="small" style={{ color: colors.textMuted }}>{formatCents(c.totalCents)}</Text>
                   </View>
                   <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.surfaceHigh }}>
-                    <View style={{ height: 4, borderRadius: 2, width: `${(c.totalCents / maxExpense) * 100}%`, backgroundColor: colors.coral }} />
+                    <View style={{ height: 4, borderRadius: 2, width: `${(c.totalCents / maxExpense) * 100}%`, backgroundColor: colors.green }} />
                   </View>
                 </View>
               ))

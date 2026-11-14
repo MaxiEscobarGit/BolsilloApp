@@ -5,8 +5,8 @@ import { Easing } from 'react-native-reanimated';
 export const colors = {
   bg: '#0A0C10',
   bgClear: 'rgba(10, 12, 16, 0)', // bg fully transparent: end of the scroll-edge gradient
-  surface: '#141B23',
-  surfaceHigh: '#1C2530',
+  surface: '#0F141A', // cards, chips, inputs: one step above the canvas
+  surfaceHigh: '#161D25', // pressed / raised surfaces
   line: 'rgba(233, 236, 235, 0.10)',
   text: '#F4F6F5',
   textMuted: '#A3A5A4',
