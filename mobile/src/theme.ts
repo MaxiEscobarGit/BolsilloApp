@@ -16,6 +16,7 @@ export const colors = {
   onGreen: '#0A0C10',
   coral: '#FF6B50', // expenses, debts, errors
   scrim: 'rgba(10, 12, 16, 0.6)', // behind sheets opened over a screen
+  scrimLight: 'rgba(10, 12, 16, 0.3)', // behind glass sheets: lighter, so the screen still reads through the glass
   barFill: 'rgba(10, 12, 16, 0.88)', // floating tab pill: bg at 88%, so cards scrolling behind only hint through
   barSelect: 'rgba(244, 246, 245, 0.14)', // selection capsule over the pill, under the active tab's icon
 } as const;
@@ -44,7 +45,7 @@ export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
 // Height of the floating tab bar's pill and assistant button; the layout and useBottomBarInset share it.
 export const size = { tabBar: 56 } as const;
 // Apple-like rounding: generous radii that grow with the element (chips < cards < sheets).
-export const radius = { sm: 10, md: 20, lg: 28, pill: 999 } as const;
+export const radius = { sm: 10, md: 20, lg: 28, sheet: 36, pill: 999 } as const;
 
 export const motion = {
   easeOut: Easing.bezier(0.23, 1, 0.32, 1),

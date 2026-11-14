@@ -385,18 +385,23 @@ function Sheet({ open, onClose, label, children }: { open: boolean; onClose: () 
     <Modal visible={open} transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
       <Animated.View
         entering={reduced ? undefined : FadeIn.duration(150).easing(motion.easeOut)}
-        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim }}>
+        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: glass === 'none' ? colors.scrim : colors.scrimLight }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
+        {/* Floating card (iOS 26 style): inset from the edges and the home indicator, every corner rounded, so the
+            screen behind shows around it and, on iOS, through the glass. */}
         <Animated.View
           entering={reduced ? undefined : SlideInDown.duration(motion.springSheet.duration).easing(motion.easeOut)}
           style={{
             maxHeight: '80%',
+            marginHorizontal: space.sm,
+            marginBottom: Math.max(insets.bottom, space.sm),
             backgroundColor: glass === 'none' ? colors.surface : 'transparent',
             overflow: 'hidden',
-            borderTopLeftRadius: radius.lg,
-            borderTopRightRadius: radius.lg,
-            paddingTop: space.md,
-            paddingBottom: insets.bottom + space.md,
+            borderRadius: radius.sheet,
+            borderWidth: glass === 'none' ? 1 : 0,
+            borderColor: colors.line,
+            paddingTop: space.lg,
+            paddingBottom: space.md,
           }}>
           <GlassFill kind={glass} />
           {/* Over the material the muted label loses legibility (§12 vibrancy). */}
