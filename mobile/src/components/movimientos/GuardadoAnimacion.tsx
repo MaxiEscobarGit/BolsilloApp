@@ -21,22 +21,23 @@ import { colors, motion, radius } from '@/theme';
 // Success moment after creating a movement (rare tier: the delight budget). Purpose: feedback + delight.
 // A bill drops into a wallet, the wallet squashes, the flap closes, a tick pops on the clasp.
 // Everything runs on the UI thread; only the haptics and the final router.back() go back to the RN runtime.
-// Starts after the overlay's 120 ms fade, once it fully covers the sheet:
-//   120 ms  bill falls in (timing, ease-out, 280 ms)
-//   400 ms  impact haptic; wallet squash (spring); flap closes (spring)
-//   590 ms  tick pops (spring with overshoot); success haptic; glow fades in
-//   640 ms  "GUARDADO" + amount rise and fade in
-//   1120 ms onDone (router.back)
-const START = 120;
-const IMPACT = START + 280;
-const TICK = START + 470;
-const END = START + 1000;
-const REDUCED_END = 600;
+// Slow enough to be read on a phone (the 1.1 s first cut went by unseen); still one beat, no loop.
+// Starts after the overlay's 150 ms fade, once it fully covers the sheet:
+//   150 ms  bill falls in (timing, ease-out, 520 ms)
+//   670 ms  impact haptic; wallet squash (spring); flap closes (spring)
+//   1050 ms tick pops (spring with overshoot); success haptic; glow fades in
+//   1150 ms "GUARDADO" + amount rise and fade in
+//   1950 ms onDone (router.back), after a short hold on the final state
+const START = 150;
+const IMPACT = START + 520;
+const TICK = IMPACT + 380;
+const END = TICK + 900;
+const REDUCED_END = 1000;
 
 const W = 156; // wallet body
 const H = 100;
 const TOP = 32; // body top inside the wallet box (room above for the back panel and the bill)
-const pop = { duration: 380, dampingRatio: 0.5 };
+const pop = { duration: 520, dampingRatio: 0.5 };
 
 // Runs `fn` on the RN runtime `ms` after the animation starts, from the UI thread.
 const at = (ms: number, fn: () => void) => {
@@ -72,12 +73,12 @@ export function GuardadoAnimacion({ cents, type, onDone }: { cents: number; type
     const impact = () => { haptic.impact(); };
     const success = () => { haptic.success(); };
     const finish = () => done.current();
-    squash.set(withDelay(IMPACT, withSequence(withSpring(1, { duration: 140, dampingRatio: 0.7 }), withSpring(0, { duration: 360, dampingRatio: 0.45 }))));
-    flap.set(withDelay(IMPACT, withSpring(0, { duration: 300, dampingRatio: 0.7 })));
+    squash.set(withDelay(IMPACT, withSequence(withSpring(1, { duration: 220, dampingRatio: 0.7 }), withSpring(0, { duration: 520, dampingRatio: 0.45 }))));
+    flap.set(withDelay(IMPACT, withSpring(0, { duration: 480, dampingRatio: 0.7 })));
     tick.set(withDelay(TICK, withSpring(1, pop)));
-    check.set(withDelay(TICK + 90, withSpring(1, pop)));
-    glow.set(withDelay(TICK, withTiming(1, { duration: 300, easing: motion.easeOut })));
-    text.set(withDelay(TICK + 50, withTiming(1, { duration: 260, easing: motion.easeOut })));
+    check.set(withDelay(TICK + 140, withSpring(1, pop)));
+    glow.set(withDelay(TICK, withTiming(1, { duration: 450, easing: motion.easeOut })));
+    text.set(withDelay(TICK + 100, withTiming(1, { duration: 400, easing: motion.easeOut })));
     // One animation drives three RN-runtime calls: impact, success, finish.
     trigger.set(withSequence(at(IMPACT, impact), at(TICK - IMPACT, success), at(END - TICK, finish)));
   }, [reduced, bill, squash, flap, tick, check, glow, text, trigger]);
@@ -103,7 +104,7 @@ export function GuardadoAnimacion({ cents, type, onDone }: { cents: number; type
   return (
     // Covers the whole sheet and swallows touches while it runs.
     <Animated.View
-      entering={FadeIn.duration(120)}
+      entering={FadeIn.duration(START)}
       accessible
       accessibilityLabel={`Movimiento guardado, ${amount}`}
       style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
