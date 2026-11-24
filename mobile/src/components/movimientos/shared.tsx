@@ -43,6 +43,9 @@ export type Recurring = {
   nextDate: string;
 };
 
+// Mirrors api/.../goals/dto/GoalResponse.java. monthlyCents: what to save per month to arrive on time.
+export type Goal = { id: string; name: string; targetCents: number; savedCents: number; deadline: string | null; monthlyCents: number | null };
+
 export type Budget = { categoryId: string; categoryName: string; emoji: string; colorHex: string; amountCents: number; spentCents: number };
 
 // SF Symbol on iOS, Material Symbol on Android and web, keyed by the system category names

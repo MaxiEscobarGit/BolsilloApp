@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { dueInfo, deudasError, daysUntil, money, type Debt, type Purchase } from '@/components/deudas/shared';
-import { categoryIcon, type Budget } from '@/components/movimientos/shared';
+import { categoryIcon, type Budget, type Goal } from '@/components/movimientos/shared';
 import { Button, Card, Screen, Text, useBottomBarInset } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
@@ -31,17 +31,20 @@ export default function Inicio() {
   const [purchases, setPurchases] = useState<Purchase[]>();
   const [debtsError, setDebtsError] = useState<string>();
   const [budgets, setBudgets] = useState<Budget[]>();
+  const [goals, setGoals] = useState<Goal[]>();
   const [refreshing, setRefreshing] = useState(false);
 
   // allSettled: a failing endpoint only affects its own section.
   const load = useCallback(async () => {
-    const [s, d, p, b] = await Promise.allSettled([
+    const [s, d, p, b, g] = await Promise.allSettled([
       api.get<Summary>('/api/metrics/summary?period=month'),
       api.get<Debt[]>('/api/debts'),
       api.get<Purchase[]>('/api/purchases'),
       api.get<Budget[]>('/api/budgets'),
+      api.get<Goal[]>('/api/goals'),
     ]);
     if (b.status === 'fulfilled') setBudgets(b.value);
+    if (g.status === 'fulfilled') setGoals(g.value);
     if (s.status === 'fulfilled') setSummary(s.value);
     setError(s.status === 'rejected' ? errorMessage(s.reason) : undefined);
     if (d.status === 'fulfilled') setDebts(d.value);
@@ -60,7 +63,7 @@ export default function Inicio() {
   const change = summary?.vsPreviousPeriod?.expenseChangePercent ?? null;
 
   // Above the fold on a 375×812 iPhone: 24 top + 56 greeting + 16 + 102 balance + 16 + 92 row + 16 + 92 row = 414 pt,
-  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The assistant's summary, budgets, the daily chart, Deudas y cuotas and the categories sit below it.
+  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The assistant's summary, budgets, goals, the daily chart, Deudas y cuotas and the categories sit below it.
   return (
     <Screen>
       {(topInset) => (
@@ -96,6 +99,8 @@ export default function Inicio() {
           <SummaryCard />
 
           {budgets ? <BudgetsCard budgets={budgets} /> : null}
+
+          {goals ? <GoalsCard goals={goals} /> : null}
 
           {summary ? <DailyChart days={summary.dailyTotals} /> : null}
 
@@ -206,6 +211,53 @@ function BudgetsCard({ budgets }: { budgets: Budget[] }) {
               <View style={{ height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' }}>
                 <View style={{ width: `${ratio * 100}%`, height: '100%', backgroundColor: over ? colors.coral : colors.green }} />
               </View>
+            </Pressable>
+          );
+        })
+      )}
+    </Card>
+  );
+}
+
+// Savings goals: progress, and how much per month to arrive on time.
+function GoalsCard({ goals }: { goals: Goal[] }) {
+  return (
+    <Card style={{ gap: space.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 }}>
+        <Text variant="label">Metas de ahorro</Text>
+        {goals.length > 0 ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Nueva meta" hitSlop={10} onPress={() => router.push('/meta')}>
+            <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={18} tintColor={colors.green} />
+          </Pressable>
+        ) : null}
+      </View>
+      {goals.length === 0 ? (
+        <>
+          <Text variant="small" style={{ color: colors.textMuted }}>Juntá para un viaje, un auto o un fondo de emergencia y mirá cuánto te falta.</Text>
+          <Button title="Crear meta" kind="ghost" onPress={() => router.push('/meta')} />
+        </>
+      ) : (
+        goals.map((g) => {
+          const done = g.savedCents >= g.targetCents;
+          return (
+            <Pressable
+              key={g.id}
+              onPress={() => router.push({ pathname: '/meta', params: { id: g.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={`${g.name}: ${formatCents(g.savedCents)} de ${formatCents(g.targetCents)}`}
+              style={({ pressed }) => ({ gap: space.xs, opacity: pressed ? 0.7 : 1 })}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.sm }}>
+                <Text variant="small" style={{ flex: 1 }} numberOfLines={1}>{g.name}</Text>
+                <Text variant="small" style={{ color: done ? colors.green : colors.textMuted }}>
+                  {done ? '¡Llegaste!' : `${formatCents(g.savedCents)} de ${formatCents(g.targetCents)}`}
+                </Text>
+              </View>
+              <View style={{ height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' }}>
+                <View style={{ width: `${Math.min(g.savedCents / g.targetCents, 1) * 100}%`, height: '100%', backgroundColor: colors.green }} />
+              </View>
+              {g.monthlyCents ? (
+                <Text variant="small" style={{ color: colors.textFaint }}>Para llegar: {formatCents(g.monthlyCents)} por mes</Text>
+              ) : null}
             </Pressable>
           );
         })
