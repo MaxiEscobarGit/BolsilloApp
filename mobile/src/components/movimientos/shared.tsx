@@ -29,6 +29,9 @@ export type Transaction = {
 // predates the SF Symbols look; system ones still carry their seeded emoji, which the app ignores).
 export type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME'; emoji: string; colorHex: string; isSystem: boolean };
 
+// Mirrors api/.../budgets/dto/BudgetResponse.java: a monthly cap in ARS and what was spent this month.
+export type Budget = { categoryId: string; categoryName: string; emoji: string; colorHex: string; amountCents: number; spentCents: number };
+
 // SF Symbol on iOS, Material Symbol on Android and web, keyed by the system category names
 // seeded in api/.../V1__crear_tablas_base.sql.
 export type Icon = Extract<SymbolViewProps['name'], object>;

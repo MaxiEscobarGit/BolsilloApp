@@ -318,8 +318,9 @@ Nomenclatura: `V{n}__{descripcion_snake_case}.sql`. Nunca editar una migración 
 | V4      | — (estaba reservada para chat, no se usó)       | saltada, no reutilizar |
 | V5      | `V5__add_exchange_rates_lookup_index.sql`       | en `main`             |
 | V6      | — (estaba reservada para seguridad, no se usó)  | saltada, no reutilizar |
-| V7      | `V7__auth_throttle.sql` (tabla `auth_attempts`) | rama `claude/seguridad-throttling` |
-| V8      | —                                               | **próxima libre**     |
+| V7      | `V7__auth_throttle.sql` (tabla `auth_attempts`) | en `main`             |
+| V8      | `V8__budgets.sql` (tabla `budgets`)             | en `main`             |
+| V9      | —                                               | **próxima libre**     |
 
 ### Tablas MVP
 
@@ -409,7 +410,7 @@ Cuando varios agentes (o personas) trabajan a la vez sobre el backend:
      una versión menor que una ya aplicada
    - `V5` → tipo de cambio (en `main`)
    - `V7` → seguridad, tabla `auth_attempts` (rama `claude/seguridad-throttling`)
-   - siguiente libre: `V8` (reservarla acá antes de usarla)
+   - siguiente libre: `V9` (reservarla acá antes de usarla)
    Si un agente necesita más de una migración, reserva un número nuevo; nunca reutiliza
    ni renumera una ya mergeada.
 3. **Bloques propios en `application.properties`.** Cada módulo agrega sus properties en
