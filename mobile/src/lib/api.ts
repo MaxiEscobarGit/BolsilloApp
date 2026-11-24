@@ -48,7 +48,7 @@ export function onUnauthorized(handler: () => void) {
   onSessionLost = handler;
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, retry = true, asText = false): Promise<T> {
   const res = await fetch(API_URL + path, {
     ...init,
     headers: {
@@ -59,7 +59,7 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   });
 
   if (res.status === 401 && retry && !path.startsWith('/api/auth/')) {
-    if (await refresh()) return request<T>(path, init, false);
+    if (await refresh()) return request<T>(path, init, false, asText);
     onSessionLost();
   }
   if (!res.ok) {
@@ -67,7 +67,8 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     const body = await res.json().catch(() => ({}));
     throw new ApiError(res.status, body.code ?? 'UNKNOWN', body.error ?? `HTTP ${res.status}`);
   }
-  return res.status === 204 ? (undefined as T) : res.json();
+  if (res.status === 204) return undefined as T;
+  return asText ? ((await res.text()) as T) : res.json();
 }
 
 // Single in-flight refresh: refresh tokens rotate, so two parallel refreshes would trip
@@ -91,6 +92,8 @@ export function refresh(): Promise<AuthResponse | null> {
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
+  // Plain-text body (CSV export) instead of JSON.
+  text: (path: string) => request<string>(path, {}, true, true),
   post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
     request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body), headers }),
   put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),

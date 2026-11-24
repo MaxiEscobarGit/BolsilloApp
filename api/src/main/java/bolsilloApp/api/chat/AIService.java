@@ -80,6 +80,18 @@ public class AIService {
         }
     }
 
+    /** Free-text answer from the smart model (no JSON contract), for one-off texts like the monthly summary. */
+    public String complete(String systemPrompt, String userMessage) {
+        try {
+            String text = extractText(objectMapper.readTree(sendMessage(smartModel, systemPrompt, userMessage)));
+            if (text == null || text.isBlank()) throw new IllegalStateException("No text content in Anthropic response");
+            return text.trim();
+        } catch (Exception e) {
+            log.error("Anthropic API call failed (model={})", smartModel, e);
+            throw new ApiException("AI service temporarily unavailable", "AI_UNAVAILABLE", 503);
+        }
+    }
+
     String modelFor(ChatIntent intent) {
         return intent == ChatIntent.QUERY ? smartModel : fastModel;
     }

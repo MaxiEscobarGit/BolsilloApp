@@ -161,6 +161,43 @@ public class TransactionService {
         return toResponse(transactionRepository.save(transaction));
     }
 
+    /**
+     * The user's movements between two dates (inclusive, at most a year) as CSV for Excel in Spanish:
+     * ";" between columns, "," for decimals and a UTF-8 BOM so accents show right.
+     */
+    @Transactional(readOnly = true)
+    public String exportCsv(UUID userId, LocalDate from, LocalDate to) {
+        if (from.isAfter(to) || from.plusYears(1).isBefore(to)) {
+            throw new ApiException("Date range must be valid and at most 1 year", "INVALID_RANGE", 422);
+        }
+        var spec = TransactionSpecification.buildSpec(userId, from, to, null, null, null);
+        var rows = transactionRepository.findAll(spec, Sort.by(Sort.Order.asc("transactionDate"), Sort.Order.asc("createdAt")));
+        StringBuilder csv = new StringBuilder("\uFEFFFecha;Tipo;Descripción;Categoría;Monto;Moneda;Monto en pesos;Cotización;Origen\n");
+        for (Transaction t : rows) {
+            csv.append(t.getTransactionDate()).append(';')
+                    .append(switch (t.getType()) { case EXPENSE -> "Gasto"; case INCOME -> "Ingreso"; case DEBT -> "Deuda"; }).append(';')
+                    .append(csvText(t.getDescription())).append(';')
+                    .append(csvText(t.getCategory().getName())).append(';')
+                    .append(csvNumber(BigDecimal.valueOf(t.getAmountCents(), 2))).append(';')
+                    .append(t.getCurrency()).append(';')
+                    .append(csvNumber(BigDecimal.valueOf(t.getAmountArsCents(), 2))).append(';')
+                    .append(csvNumber(t.getExchangeRate())).append(';')
+                    .append(t.getSource()).append('\n');
+        }
+        return csv.toString();
+    }
+
+    private static String csvText(String value) {
+        String v = value == null ? "" : value;
+        // A leading = + - @ would run as a formula in Excel.
+        if (!v.isEmpty() && "=+-@".indexOf(v.charAt(0)) >= 0) v = "'" + v;
+        return "\"" + v.replace("\"", "\"\"") + "\"";
+    }
+
+    private static String csvNumber(BigDecimal value) {
+        return value == null ? "" : value.stripTrailingZeros().toPlainString().replace('.', ',');
+    }
+
     @Transactional
     public void softDelete(UUID userId, UUID id) {
         var transaction = transactionRepository.findByIdAndUserIdAndDeletedAtIsNull(id, userId)

@@ -6,7 +6,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { dueInfo, deudasError, daysUntil, money, type Debt, type Purchase } from '@/components/deudas/shared';
 import { categoryIcon, type Budget } from '@/components/movimientos/shared';
 import { Button, Card, Screen, Text, useBottomBarInset } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { formatCents } from '@/lib/money';
 import { useSession } from '@/lib/session';
@@ -60,7 +60,7 @@ export default function Inicio() {
   const change = summary?.vsPreviousPeriod?.expenseChangePercent ?? null;
 
   // Above the fold on a 375×812 iPhone: 24 top + 56 greeting + 16 + 102 balance + 16 + 92 row + 16 + 92 row = 414 pt,
-  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). Budgets, the daily chart, Deudas y cuotas and the categories sit below it.
+  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The assistant's summary, budgets, the daily chart, Deudas y cuotas and the categories sit below it.
   return (
     <Screen>
       {(topInset) => (
@@ -93,6 +93,8 @@ export default function Inicio() {
             />
           </View>
 
+          <SummaryCard />
+
           {budgets ? <BudgetsCard budgets={budgets} /> : null}
 
           {summary ? <DailyChart days={summary.dailyTotals} /> : null}
@@ -120,6 +122,48 @@ export default function Inicio() {
         </ScrollView>
       )}
     </Screen>
+  );
+}
+
+// "¿Cómo vengo?": the assistant compares this month with the same days of last month. On demand only,
+// since each summary uses one of the month's assistant messages.
+function SummaryCard() {
+  const [summary, setSummary] = useState<string>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const ask = async () => {
+    setLoading(true);
+    setError(undefined);
+    try {
+      setSummary((await api.post<{ summary: string }>('/api/chat/monthly-summary')).summary);
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.code === 'RATE_LIMITED' ? 'Ya usaste los mensajes del asistente de este mes.'
+        : e instanceof ApiError && e.code === 'AI_UNAVAILABLE' ? 'El asistente no está disponible ahora. Probá en un rato.'
+        : errorMessage(e),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card style={{ gap: space.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }} size={16} tintColor={colors.green} />
+        <Text variant="label">¿Cómo vengo este mes?</Text>
+      </View>
+      {summary ? (
+        <Text accessibilityLiveRegion="polite">{summary}</Text>
+      ) : (
+        <Text variant="small" style={{ color: colors.textMuted }}>
+          El asistente compara este mes con el anterior y te lo cuenta en pocas palabras. Usa uno de tus mensajes.
+        </Text>
+      )}
+      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+      <Button title={summary ? 'Volver a pedir' : 'Pedir resumen'} kind="ghost" loading={loading} onPress={ask} />
+    </Card>
   );
 }
 
