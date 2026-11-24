@@ -4,7 +4,8 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { dueInfo, deudasError, daysUntil, money, type Debt, type Purchase } from '@/components/deudas/shared';
-import { Card, Screen, Text, useBottomBarInset } from '@/components/ui';
+import { categoryIcon, type Budget } from '@/components/movimientos/shared';
+import { Button, Card, Screen, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { formatCents } from '@/lib/money';
@@ -29,15 +30,18 @@ export default function Inicio() {
   const [debts, setDebts] = useState<Debt[]>();
   const [purchases, setPurchases] = useState<Purchase[]>();
   const [debtsError, setDebtsError] = useState<string>();
+  const [budgets, setBudgets] = useState<Budget[]>();
   const [refreshing, setRefreshing] = useState(false);
 
   // allSettled: a failing endpoint only affects its own section.
   const load = useCallback(async () => {
-    const [s, d, p] = await Promise.allSettled([
+    const [s, d, p, b] = await Promise.allSettled([
       api.get<Summary>('/api/metrics/summary?period=month'),
       api.get<Debt[]>('/api/debts'),
       api.get<Purchase[]>('/api/purchases'),
+      api.get<Budget[]>('/api/budgets'),
     ]);
+    if (b.status === 'fulfilled') setBudgets(b.value);
     if (s.status === 'fulfilled') setSummary(s.value);
     setError(s.status === 'rejected' ? errorMessage(s.reason) : undefined);
     if (d.status === 'fulfilled') setDebts(d.value);
@@ -56,7 +60,7 @@ export default function Inicio() {
   const change = summary?.vsPreviousPeriod?.expenseChangePercent ?? null;
 
   // Above the fold on a 375×812 iPhone: 24 top + 56 greeting + 16 + 102 balance + 16 + 92 row + 16 + 92 row = 414 pt,
-  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The daily chart, Deudas y cuotas and the categories sit below it.
+  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). Budgets, the daily chart, Deudas y cuotas and the categories sit below it.
   return (
     <Screen>
       {(topInset) => (
@@ -89,6 +93,8 @@ export default function Inicio() {
             />
           </View>
 
+          {budgets ? <BudgetsCard budgets={budgets} /> : null}
+
           {summary ? <DailyChart days={summary.dailyTotals} /> : null}
 
           <DebtsCard debts={debts} purchases={purchases} error={debtsError} />
@@ -114,6 +120,53 @@ export default function Inicio() {
         </ScrollView>
       )}
     </Screen>
+  );
+}
+
+// Monthly caps per category, most used first. The bar turns coral once the cap is passed.
+function BudgetsCard({ budgets }: { budgets: Budget[] }) {
+  const sorted = [...budgets].sort((a, b) => b.spentCents / b.amountCents - a.spentCents / a.amountCents);
+  return (
+    <Card style={{ gap: space.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 }}>
+        <Text variant="label">Presupuestos</Text>
+        {budgets.length > 0 ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Nuevo presupuesto" hitSlop={10} onPress={() => router.push('/presupuesto')}>
+            <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} size={18} tintColor={colors.green} />
+          </Pressable>
+        ) : null}
+      </View>
+      {budgets.length === 0 ? (
+        <>
+          <Text variant="small" style={{ color: colors.textMuted }}>Poné un tope por mes a una categoría y mirá cuánto te queda.</Text>
+          <Button title="Crear presupuesto" kind="ghost" onPress={() => router.push('/presupuesto')} />
+        </>
+      ) : (
+        sorted.map((b) => {
+          const over = b.spentCents > b.amountCents;
+          const ratio = Math.min(b.spentCents / b.amountCents, 1);
+          return (
+            <Pressable
+              key={b.categoryId}
+              onPress={() => router.push({ pathname: '/presupuesto', params: { categoryId: b.categoryId } })}
+              accessibilityRole="button"
+              accessibilityLabel={`${b.categoryName}: ${formatCents(b.spentCents)} de ${formatCents(b.amountCents)}`}
+              style={({ pressed }) => ({ gap: space.xs, opacity: pressed ? 0.7 : 1 })}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                <SymbolView name={categoryIcon(b.categoryName, b.emoji)} size={14} tintColor={b.colorHex} />
+                <Text variant="small" style={{ flex: 1 }} numberOfLines={1}>{b.categoryName}</Text>
+                <Text variant="small" style={{ color: over ? colors.coral : colors.textMuted }}>
+                  {over ? `Te pasaste ${formatCents(b.spentCents - b.amountCents)}` : `Te quedan ${formatCents(b.amountCents - b.spentCents)}`}
+                </Text>
+              </View>
+              <View style={{ height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' }}>
+                <View style={{ width: `${ratio * 100}%`, height: '100%', backgroundColor: over ? colors.coral : colors.green }} />
+              </View>
+            </Pressable>
+          );
+        })
+      )}
+    </Card>
   );
 }
 
