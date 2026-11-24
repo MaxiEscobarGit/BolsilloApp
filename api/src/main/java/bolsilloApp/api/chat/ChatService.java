@@ -50,7 +50,7 @@ import java.util.UUID;
 @Slf4j
 public class ChatService {
 
-    static final int MAX_AI_MESSAGES_PER_MONTH = 100;
+    public static final int MAX_AI_MESSAGES_PER_MONTH = 100;
     static final String FALLBACK_EXPENSE_CATEGORY = "Otros";
     static final String FALLBACK_INCOME_CATEGORY = "Otros ingresos";
 

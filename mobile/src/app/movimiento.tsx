@@ -31,6 +31,12 @@ export default function MovimientoSheet() {
   // Only new movements resolve a rate on save; an edit keeps the one it already has.
   const autoRate = useAutoRate(!id && currency !== 'ARS' && !rate.trim(), date);
 
+  // A new movement starts in the user's default currency (Perfil > Ajustes).
+  useEffect(() => {
+    if (id) return;
+    api.get<{ defaultCurrency: Currency }>('/api/users/me').then((p) => setCurrency((c) => (c === 'ARS' ? p.defaultCurrency : c))).catch(() => {});
+  }, [id]);
+
   useEffect(() => {
     api.get<Category[]>('/api/categories').then(setCategories).catch((e) => setError(txError(e)));
     if (!id) return;
