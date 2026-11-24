@@ -237,7 +237,8 @@ export function FormScreen({ children, footer }: { children: ReactNode; footer?:
               scrollEventThrottle={16}
               onScroll={(e) => { view.current.y = e.nativeEvent.contentOffset.y; }}
               // The viewport shrinks frame by frame while the keyboard rises: keep the focused field in view.
-              onLayout={(e) => { view.current.height = e.nativeEvent.layout.height; reveal(TextInput.State.currentlyFocusedInput()); }}
+              // react-native-web's TextInput.State has no currentlyFocusedInput, hence the optional call.
+              onLayout={(e) => { view.current.height = e.nativeEvent.layout.height; reveal(TextInput.State.currentlyFocusedInput?.()); }}
               contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl, gap: space.lg }}>
               {children}
               {footer ? <View style={{ marginTop: space.lg, gap: space.xs }}>{footer}</View> : null}
