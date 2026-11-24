@@ -52,6 +52,10 @@ function Routes() {
           name="presupuesto"
           options={{ presentation: 'formSheet', sheetAllowedDetents: [size.formSheet], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
         />
+        <Stack.Screen
+          name="fijo"
+          options={{ presentation: 'formSheet', sheetAllowedDetents: [size.formSheet], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="login" />

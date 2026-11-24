@@ -15,7 +15,7 @@ export type Transaction = {
   amountArsCents: number;
   exchangeRate: number;
   type: 'EXPENSE' | 'INCOME' | 'DEBT';
-  source: 'CHAT' | 'MANUAL' | 'IMPORT';
+  source: 'CHAT' | 'MANUAL' | 'IMPORT' | 'RECURRING';
   description: string;
   categoryId: string;
   categoryName: string;
@@ -30,6 +30,19 @@ export type Transaction = {
 export type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME'; emoji: string; colorHex: string; isSystem: boolean };
 
 // Mirrors api/.../budgets/dto/BudgetResponse.java: a monthly cap in ARS and what was spent this month.
+// Mirrors api/.../recurring/dto/RecurringResponse.java: a movement created by itself every month on that day.
+export type Recurring = {
+  id: string;
+  type: 'EXPENSE' | 'INCOME';
+  amountCents: number;
+  currency: 'ARS' | 'USD';
+  description: string;
+  categoryId: string;
+  categoryName: string;
+  dayOfMonth: number;
+  nextDate: string;
+};
+
 export type Budget = { categoryId: string; categoryName: string; emoji: string; colorHex: string; amountCents: number; spentCents: number };
 
 // SF Symbol on iOS, Material Symbol on Android and web, keyed by the system category names

@@ -1,5 +1,5 @@
 package bolsilloApp.api.transactions;
 
 public enum TransactionSource {
-    CHAT, MANUAL, IMPORT
+    CHAT, MANUAL, IMPORT, RECURRING
 }
