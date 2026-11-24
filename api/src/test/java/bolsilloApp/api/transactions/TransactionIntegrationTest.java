@@ -775,4 +775,48 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
                 .andReturn();
         return objectMapper.readValue(result.getResponse().getContentAsString(), TransactionListResponse.class).data();
     }
+
+    // T-TXN-EXPORT
+    @Test
+    void exportarCsvTraeSoloLosDelUsuarioEnElRangoYEscapaTextos() throws Exception {
+        String token = registerAndGetToken();
+        String other = registerAndGetToken("otro@test.com");
+        UUID catId = getSystemExpenseCategoryId();
+        for (var req : List.of(
+                new CreateTransactionRequest(new BigDecimal("1234.5"), bolsilloApp.api.transactions.TransactionType.EXPENSE,
+                        "=SUMA \"rara\"; con punto y coma", catId, LocalDate.now(), null, null),
+                new CreateTransactionRequest(new BigDecimal("10"), bolsilloApp.api.transactions.TransactionType.EXPENSE,
+                        "Vieja", catId, LocalDate.now().minusMonths(3), null, null))) {
+            mockMvc.perform(post("/api/transactions").header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON).content(toJson(req)))
+                    .andExpect(status().isCreated());
+        }
+        mockMvc.perform(post("/api/transactions").header("Authorization", "Bearer " + other)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(TestDataFactory.transactionRequest(catId, new BigDecimal("99"),
+                                bolsilloApp.api.transactions.TransactionType.EXPENSE, LocalDate.now()))))
+                .andExpect(status().isCreated());
+
+        var result = mockMvc.perform(get("/api/transactions/export")
+                        .param("from", LocalDate.now().withDayOfMonth(1).toString())
+                        .param("to", LocalDate.now().toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String csv = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(result.getResponse().getContentType()).startsWith("text/csv");
+        assertThat(csv).startsWith("\uFEFFFecha;Tipo;");
+        String[] lines = csv.strip().split("\n");
+        assertThat(lines).hasSize(2);
+        assertThat(lines[1]).contains(";Gasto;\"'=SUMA \"\"rara\"\"; con punto y coma\";").contains(";1234,5;ARS;1234,5;1;MANUAL");
+    }
+
+    @Test
+    void exportarConRangoInvalidoDevuelve422() throws Exception {
+        String token = registerAndGetToken();
+        mockMvc.perform(get("/api/transactions/export").param("from", "2026-05-01").param("to", "2026-01-01")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnprocessableEntity());
+    }
 }

@@ -6,6 +6,7 @@ import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-n
 import { categoryIcon, formatMoney, isoDate, txError, type Category, type Icon, type Transaction } from '@/components/movimientos/shared';
 import { AddButton, Button, Card, Screen, Select, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
+import { shareTextFile } from '@/lib/share-file';
 import { formatCents } from '@/lib/money';
 import { colors, fonts, radius, space, type } from '@/theme';
 
@@ -70,6 +71,22 @@ export default function Movimientos() {
   const isCurrentMonth = month.getFullYear() === new Date().getFullYear() && month.getMonth() === new Date().getMonth();
   const visibleCategories = categories.filter((c) => !txType || c.type === txType);
 
+  // The selected month as a CSV for Excel, through the share sheet.
+  const [exporting, setExporting] = useState(false);
+  const exportMonth = async () => {
+    setExporting(true);
+    try {
+      const from = isoDate(month);
+      const to = isoDate(new Date(month.getFullYear(), month.getMonth() + 1, 0));
+      const csv = await api.text(`/api/transactions/export?from=${from}&to=${to}`);
+      await shareTextFile(`bolsillo-${from.slice(0, 7)}.csv`, csv, 'text/csv');
+    } catch (e) {
+      setError(txError(e));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Screen
       style={{ paddingHorizontal: 0 }}
@@ -77,7 +94,18 @@ export default function Movimientos() {
         <View style={{ gap: space.md, paddingTop: space.lg, paddingBottom: space.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text variant="title">Movimientos</Text>
-            <AddButton accessibilityLabel="Cargar movimiento" onPress={() => router.push('/movimiento')} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+              <Pressable
+                onPress={exportMonth}
+                disabled={exporting}
+                accessibilityRole="button"
+                accessibilityLabel={`Exportar ${monthName(month)} a Excel`}
+                hitSlop={10}
+                style={({ pressed }) => ({ opacity: exporting ? 0.4 : pressed ? 0.6 : 1 })}>
+                <SymbolView name={{ ios: 'square.and.arrow.up', android: 'ios_share', web: 'ios_share' }} size={22} tintColor={colors.text} />
+              </Pressable>
+              <AddButton accessibilityLabel="Cargar movimiento" onPress={() => router.push('/movimiento')} />
+            </View>
           </View>
 
           <SearchField value={query} onChange={setQuery} />

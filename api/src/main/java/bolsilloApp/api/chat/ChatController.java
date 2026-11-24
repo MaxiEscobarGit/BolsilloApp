@@ -19,6 +19,7 @@ import java.util.List;
 public class ChatController {
 
     private final ChatService chatService;
+    private final MonthlySummaryService monthlySummaryService;
 
     @PostMapping
     public ResponseEntity<ChatResponse> chat(
@@ -33,5 +34,10 @@ public class ChatController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) LocalDateTime before) {
         return ResponseEntity.ok(chatService.getHistory(currentUser.getId(), limit, before));
+    }
+
+    @PostMapping("/monthly-summary")
+    public ResponseEntity<MonthlySummaryService.MonthlySummaryResponse> monthlySummary(@AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(monthlySummaryService.summarize(currentUser.getId()));
     }
 }

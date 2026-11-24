@@ -41,6 +41,17 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.findAll(currentUser.getId(), from, to, categoryId, type, q, limit, offset));
     }
 
+    @GetMapping(value = "/export", produces = "text/csv")
+    public ResponseEntity<String> export(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to) {
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"bolsillo-" + from + "-a-" + to + ".csv\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(transactionService.exportCsv(currentUser.getId(), from, to));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<TransactionResponse> findById(
             @AuthenticationPrincipal User currentUser,
