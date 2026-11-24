@@ -170,4 +170,53 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
         assertThat(p.paidInstallments()).isGreaterThanOrEqualTo(1);
         assertThat(p.remainingAmountCents()).isLessThan(p.totalAmountCents());
     }
+
+    // T-PUR-PAY
+    @Test
+    void pagarProximaCuotaLaAdelantaAHoyYAlTerminarDevuelve409() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+        var req = TestDataFactory.purchaseRequest(catId, new BigDecimal("300.00"), 3, LocalDate.now());
+        var createResult = mockMvc.perform(post("/api/purchases")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var created = objectMapper.readValue(createResult.getResponse().getContentAsString(), PurchaseResponse.class);
+        assertThat(created.paidInstallments()).isEqualTo(1);
+
+        for (int expectedPaid = 2; expectedPaid <= 3; expectedPaid++) {
+            var payResult = mockMvc.perform(post("/api/purchases/" + created.id() + "/pay-next")
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            var paid = objectMapper.readValue(payResult.getResponse().getContentAsString(), PurchaseResponse.class);
+            assertThat(paid.paidInstallments()).isEqualTo(expectedPaid);
+        }
+
+        mockMvc.perform(post("/api/purchases/" + created.id() + "/pay-next")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict());
+    }
+
+    // T-PUR-PAY-OTHER
+    @Test
+    void pagarCuotaDeCompraDeOtroUsuarioDevuelve404() throws Exception {
+        String tokenA = registerAndGetToken("a@test.com");
+        String tokenB = registerAndGetToken("b@test.com");
+        UUID catId = getSystemExpenseCategoryId();
+        var req = TestDataFactory.purchaseRequest(catId, new BigDecimal("300.00"), 3, LocalDate.now());
+        var createResult = mockMvc.perform(post("/api/purchases")
+                        .header("Authorization", "Bearer " + tokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(req)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var created = objectMapper.readValue(createResult.getResponse().getContentAsString(), PurchaseResponse.class);
+
+        mockMvc.perform(post("/api/purchases/" + created.id() + "/pay-next")
+                        .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isNotFound());
+    }
 }

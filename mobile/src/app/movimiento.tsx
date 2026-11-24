@@ -7,7 +7,8 @@ import { Segmented } from '@/components/deudas/shared';
 import { categoryIcon, Chip, confirmDestructive, haptic, isoDate, lastCategory, txError, type Category, type Transaction } from '@/components/movimientos/shared';
 import { AmountField, AmountHero, Button, DateField, Disclosure, Field, FormScreen, Text, type Currency } from '@/components/ui';
 import { api } from '@/lib/api';
-import { formatAmount, parseAmount } from '@/lib/money';
+import { formatDate } from '@/lib/dates';
+import { formatAmount, formatCents, parseAmount } from '@/lib/money';
 import { colors, space } from '@/theme';
 
 // Add (no id) or edit (?id=) a transaction. A short, abandonable task: native form sheet (animate-expo),
@@ -27,6 +28,8 @@ export default function MovimientoSheet() {
   const [error, setError] = useState<string>();
   const [tried, setTried] = useState(false);
   const [saved, setSaved] = useState<number>();
+  // Only new movements resolve a rate on save; an edit keeps the one it already has.
+  const autoRate = useAutoRate(!id && currency !== 'ARS' && !rate.trim(), date);
 
   useEffect(() => {
     api.get<Category[]>('/api/categories').then(setCategories).catch((e) => setError(txError(e)));
@@ -154,6 +157,14 @@ export default function MovimientoSheet() {
             error={tried ? invalid.amount || undefined : undefined}
           />
 
+          {autoRate ? (
+            <Text accessibilityRole="text" variant="small" style={{ color: autoRate.rateDate === date ? colors.textMuted : colors.coral, marginTop: -space.md }}>
+              {autoRate.rateDate === date
+                ? `Dólar ${autoRate.source} de ese día: ${formatCents(Math.round(autoRate.rate * 100))}`
+                : `No hay cotización del ${formatDate(date)}: se usa la del ${formatDate(autoRate.rateDate)} (dólar ${autoRate.source}, ${formatCents(Math.round(autoRate.rate * 100))}). Podés cargar otra en Más opciones.`}
+            </Text>
+          ) : null}
+
           <Field
             label="Descripción"
             value={description}
@@ -190,4 +201,31 @@ export default function MovimientoSheet() {
     {saved !== undefined && <GuardadoAnimacion cents={saved} type={txType} onDone={() => router.back()} />}
     </View>
   );
+}
+
+type Rate = { rate: number; rateDate: string; source: string };
+
+// The rate the API will use when the movement has no manual one: the user's preferred source on that date,
+// or the latest one before it (weekends, holidays, a missed sync). Shown so an old rate never goes unnoticed.
+function useAutoRate(enabled: boolean, date: string) {
+  const [found, setFound] = useState<Rate>();
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    (async () => {
+      try {
+        const latest = await api.get<Rate>('/api/exchange-rates/latest');
+        if (date >= latest.rateDate) return live && setFound(latest);
+        const from = new Date(date + 'T12:00:00');
+        from.setDate(from.getDate() - 14);
+        const history = await api.get<Rate[]>(`/api/exchange-rates?source=${latest.source}&from=${isoDate(from)}&to=${date}`);
+        const best = history.reduce<Rate | undefined>((a, r) => (!a || r.rateDate > a.rateDate ? r : a), undefined);
+        if (live) setFound(best);
+      } catch {
+        if (live) setFound(undefined); // the save itself reports a missing rate
+      }
+    })();
+    return () => { live = false; };
+  }, [enabled, date]);
+  return enabled ? found : undefined;
 }

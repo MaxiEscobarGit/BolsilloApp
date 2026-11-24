@@ -37,4 +37,11 @@ public class PurchaseController {
             @PathVariable UUID id) {
         return ResponseEntity.ok(purchaseService.findById(currentUser.getId(), id));
     }
+
+    @PostMapping("/{id}/pay-next")
+    public ResponseEntity<PurchaseResponse> payNext(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(purchaseService.payNextInstallment(currentUser.getId(), id));
+    }
 }

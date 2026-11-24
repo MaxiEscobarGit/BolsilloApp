@@ -38,12 +38,21 @@ public final class TransactionSpecification {
         return (root, query, cb) -> cb.equal(root.get("type"), type);
     }
 
+    /** Case-insensitive match on the description or the category name; % and _ in the text are literal. */
+    public static Specification<Transaction> matchesText(String text) {
+        String pattern = "%" + text.toLowerCase()
+                .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        return (root, query, cb) -> cb.or(
+                cb.like(cb.lower(root.get("description")), pattern, '\\'),
+                cb.like(cb.lower(root.get("category").get("name")), pattern, '\\'));
+    }
+
     /**
      * Composes a full specification from the given optional filters.
      * Only adds predicates for non-null parameters.
      */
     public static Specification<Transaction> buildSpec(UUID userId, LocalDate from, LocalDate to,
-                                                        UUID categoryId, TransactionType type) {
+                                                        UUID categoryId, TransactionType type, String text) {
         Specification<Transaction> spec = Specification
                 .where(belongsToUser(userId))
                 .and(notDeleted());
@@ -59,6 +68,9 @@ public final class TransactionSpecification {
         }
         if (type != null) {
             spec = spec.and(hasType(type));
+        }
+        if (text != null && !text.isBlank()) {
+            spec = spec.and(matchesText(text.trim()));
         }
 
         return spec;

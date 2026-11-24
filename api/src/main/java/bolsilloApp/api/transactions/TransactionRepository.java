@@ -39,6 +39,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     @Query("SELECT t FROM Transaction t WHERE t.purchase.id = :purchaseId AND t.deletedAt IS NULL AND t.transactionDate <= CURRENT_DATE")
     List<Transaction> findPaidInstallments(UUID purchaseId);
 
+    // First installment still in the future: the one "pay next" brings forward to today.
+    Optional<Transaction> findFirstByPurchaseIdAndDeletedAtIsNullAndTransactionDateAfterOrderByInstallmentNumberAsc(
+            UUID purchaseId, LocalDate date);
+
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.purchase.id = :purchaseId AND t.deletedAt IS NULL AND t.transactionDate <= CURRENT_DATE")
     int countPaidInstallments(UUID purchaseId);
 }

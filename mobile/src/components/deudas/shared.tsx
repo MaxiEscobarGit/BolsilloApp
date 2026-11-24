@@ -54,6 +54,7 @@ export type Purchase = {
 // Codes the debts/purchases endpoints add on top of lib/errors.ts.
 const codes: Record<string, string> = {
   ALREADY_PAID: 'Esta deuda ya estaba pagada.',
+  ALL_PAID: 'Ya pagaste todas las cuotas.',
   MISSING_EXCHANGE_RATE: 'No encontramos la cotización del dólar para esa fecha.',
   INVALID_INSTALLMENTS: 'Las cuotas tienen que ser entre 1 y 60.',
   NOT_FOUND: 'No lo encontramos. Actualizá la lista.',
