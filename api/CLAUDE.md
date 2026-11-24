@@ -321,7 +321,8 @@ Nomenclatura: `V{n}__{descripcion_snake_case}.sql`. Nunca editar una migración 
 | V7      | `V7__auth_throttle.sql` (tabla `auth_attempts`) | en `main`             |
 | V8      | `V8__budgets.sql` (tabla `budgets`)             | en `main`             |
 | V9      | `V9__recurring.sql` (tabla `recurring`, source RECURRING) | en `main` |
-| V10     | —                                               | **próxima libre**     |
+| V10     | `V10__savings_goals.sql` (tabla `savings_goals`) | en `main`            |
+| V11     | —                                               | **próxima libre**     |
 
 ### Tablas MVP
 
@@ -411,7 +412,7 @@ Cuando varios agentes (o personas) trabajan a la vez sobre el backend:
      una versión menor que una ya aplicada
    - `V5` → tipo de cambio (en `main`)
    - `V7` → seguridad, tabla `auth_attempts` (rama `claude/seguridad-throttling`)
-   - siguiente libre: `V10` (reservarla acá antes de usarla)
+   - siguiente libre: `V11` (reservarla acá antes de usarla)
    Si un agente necesita más de una migración, reserva un número nuevo; nunca reutiliza
    ni renumera una ya mergeada.
 3. **Bloques propios en `application.properties`.** Cada módulo agrega sus properties en
