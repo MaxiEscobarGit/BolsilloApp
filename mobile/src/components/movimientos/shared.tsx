@@ -25,10 +25,12 @@ export type Transaction = {
 };
 
 // Mirrors api/.../categories/dto/CategoryResponse.java.
-export type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME' };
+// `emoji` holds the key of a symbol from `customIcons` for the user's own categories (the API field
+// predates the SF Symbols look; system ones still carry their seeded emoji, which the app ignores).
+export type Category = { id: string; name: string; type: 'EXPENSE' | 'INCOME'; emoji: string; colorHex: string; isSystem: boolean };
 
 // SF Symbol on iOS, Material Symbol on Android and web, keyed by the system category names
-// seeded in api/.../V1__crear_tablas_base.sql. The API's emoji is not shown; user categories get a generic tag.
+// seeded in api/.../V1__crear_tablas_base.sql.
 export type Icon = Extract<SymbolViewProps['name'], object>;
 const sym = (ios: Icon['ios'], android: Icon['android']): Icon => ({ ios, android, web: android });
 const categoryIcons: Record<string, Icon> = {
@@ -46,7 +48,34 @@ const categoryIcons: Record<string, Icon> = {
   Inversiones: sym('chart.line.uptrend.xyaxis', 'trending_up'),
   'Otros ingresos': sym('banknote', 'payments'),
 };
-export const categoryIcon = (name: string): Icon => categoryIcons[name] ?? sym('tag', 'sell');
+
+// Icons a user can pick for their own categories, stored by key in the category's `emoji`.
+export const customIcons: Record<string, Icon> = {
+  tag: sym('tag', 'sell'),
+  house: sym('house', 'home'),
+  car: sym('car', 'directions_car'),
+  fuel: sym('fuelpump', 'local_gas_station'),
+  pet: sym('pawprint', 'pets'),
+  gym: sym('dumbbell', 'fitness_center'),
+  coffee: sym('cup.and.saucer', 'local_cafe'),
+  bar: sym('wineglass', 'local_bar'),
+  gift: sym('gift', 'redeem'),
+  plane: sym('airplane', 'flight'),
+  baby: sym('figure.and.child.holdinghands', 'child_care'),
+  phone: sym('iphone', 'smartphone'),
+  wifi: sym('wifi', 'wifi'),
+  music: sym('music.note', 'music_note'),
+  game: sym('gamecontroller', 'sports_esports'),
+  health: sym('heart', 'favorite'),
+  beauty: sym('sparkles', 'auto_awesome'),
+  tools: sym('wrench.and.screwdriver', 'build'),
+  savings: sym('banknote', 'savings'),
+  card: sym('creditcard', 'credit_card'),
+};
+
+// Custom categories show the icon they were saved with; system ones are keyed by their name.
+export const categoryIcon = (name: string, emoji?: string): Icon =>
+  categoryIcons[name] ?? (emoji && customIcons[emoji]) ?? customIcons.tag;
 
 export { isoDate } from '@/lib/dates';
 

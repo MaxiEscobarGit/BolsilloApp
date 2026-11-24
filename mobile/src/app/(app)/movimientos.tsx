@@ -3,7 +3,7 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
-import { categoryIcon, formatMoney, isoDate, txError, type Category, type Transaction } from '@/components/movimientos/shared';
+import { categoryIcon, formatMoney, isoDate, txError, type Category, type Icon, type Transaction } from '@/components/movimientos/shared';
 import { AddButton, Button, Card, Screen, Select, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
@@ -90,7 +90,7 @@ export default function Movimientos() {
               <Select
                 label="Categoría"
                 value={categoryId}
-                options={[{ value: '', label: 'Todas' }, ...visibleCategories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name) }))]}
+                options={[{ value: '', label: 'Todas' }, ...visibleCategories.map((c) => ({ value: c.id, label: c.name, icon: categoryIcon(c.name, c.emoji) }))]}
                 onChange={setCategoryId}
               />
             </View>
@@ -112,7 +112,7 @@ export default function Movimientos() {
           contentContainerStyle={{ paddingHorizontal: space.lg, paddingTop: topInset, paddingBottom: bottomInset, gap: space.sm, flexGrow: 1 }}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
-          renderItem={({ item }) => <Row tx={item} />}
+          renderItem={({ item }) => <Row tx={item} icon={categoryIcon(item.categoryName, categories.find((c) => c.id === item.categoryId)?.emoji)} />}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', gap: space.md, paddingTop: space.xl }}>
               <Text variant="heading">Nada por acá</Text>
@@ -150,7 +150,7 @@ function MonthArrow({ dir, disabled, onPress }: { dir: 'back' | 'forward'; disab
   );
 }
 
-function Row({ tx }: { tx: Transaction }) {
+function Row({ tx, icon }: { tx: Transaction; icon: Icon }) {
   const income = tx.type === 'INCOME';
   const tags = [tx.source === 'CHAT' && 'Chat', tx.installmentNumber && `Cuota ${tx.installmentNumber}`].filter(Boolean) as string[];
   return (
@@ -165,7 +165,7 @@ function Row({ tx }: { tx: Transaction }) {
       <View style={{ flex: 1, gap: 2 }}>
         <Text numberOfLines={1} style={{ fontFamily: fonts.medium }}>{tx.description}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
-          <SymbolView name={categoryIcon(tx.categoryName)} size={14} tintColor={colors.textMuted} />
+          <SymbolView name={icon} size={14} tintColor={colors.textMuted} />
           <Text variant="small" numberOfLines={1} style={{ color: colors.textMuted }}>
             {tx.categoryName} · {shortDate(tx.transactionDate)}
           </Text>

@@ -44,6 +44,10 @@ function Routes() {
           name="movimiento"
           options={{ presentation: 'formSheet', sheetAllowedDetents: [size.formSheet], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
         />
+        <Stack.Screen
+          name="categoria"
+          options={{ presentation: 'formSheet', sheetAllowedDetents: [size.formSheet], sheetGrabberVisible: true, animation: reduced ? 'fade' : 'default' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="login" />

@@ -132,7 +132,7 @@ export default function NuevaCompra() {
         ) : (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
             {categories.map((c) => (
-              <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
+              <Chip key={c.id} label={c.name} icon={categoryIcon(c.name, c.emoji)} selected={categoryId === c.id} onPress={() => setCategoryId(c.id)} />
             ))}
           </View>
         )}
