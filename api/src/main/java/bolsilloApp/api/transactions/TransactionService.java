@@ -79,7 +79,7 @@ public class TransactionService {
     }
 
     public TransactionListResponse findAll(UUID userId, LocalDate from, LocalDate to,
-                                              UUID categoryId, TransactionType type,
+                                              UUID categoryId, TransactionType type, String text,
                                               int limit, int offset) {
         if (from != null && to != null && from.plusYears(1).isBefore(to)) {
             throw new ApiException("Date range cannot exceed 1 year", "INVALID_RANGE", 422);
@@ -87,7 +87,7 @@ public class TransactionService {
 
         int effectiveLimit = Math.min(limit, 200);
 
-        Specification<Transaction> spec = TransactionSpecification.buildSpec(userId, from, to, categoryId, type);
+        Specification<Transaction> spec = TransactionSpecification.buildSpec(userId, from, to, categoryId, type, text);
 
         // Page number is derived from offset and limit (offset-based pagination)
         int pageNumber = offset / effectiveLimit;

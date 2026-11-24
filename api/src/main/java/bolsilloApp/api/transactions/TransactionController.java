@@ -35,9 +35,10 @@ public class TransactionController {
             @RequestParam(required = false) LocalDate to,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(defaultValue = "0") int offset) {
-        return ResponseEntity.ok(transactionService.findAll(currentUser.getId(), from, to, categoryId, type, limit, offset));
+        return ResponseEntity.ok(transactionService.findAll(currentUser.getId(), from, to, categoryId, type, q, limit, offset));
     }
 
     @GetMapping("/{id}")

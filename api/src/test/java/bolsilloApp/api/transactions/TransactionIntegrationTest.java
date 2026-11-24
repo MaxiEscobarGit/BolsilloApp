@@ -743,4 +743,36 @@ class TransactionIntegrationTest extends AbstractIntegrationTest {
         assertThat(patched.amountArsCents()).isEqualTo(originalArsCents);
         assertThat(patched.amountCents()).isEqualTo(created.amountCents());
     }
+
+    // T-TXN-SEARCH
+    @Test
+    void buscarPorTextoFiltraPorDescripcionYCategoriaSinDistinguirMayusculas() throws Exception {
+        String token = registerAndGetToken();
+        UUID catId = getSystemExpenseCategoryId();
+        for (String description : List.of("Uber al centro", "UBER vuelta", "Verdulería", "100% jugo")) {
+            var req = new CreateTransactionRequest(new BigDecimal("10"), bolsilloApp.api.transactions.TransactionType.EXPENSE,
+                    description, catId, LocalDate.now(), null, null);
+            mockMvc.perform(post("/api/transactions")
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(toJson(req)))
+                    .andExpect(status().isCreated());
+        }
+
+        assertThat(search(token, "uber")).extracting(TransactionResponse::description)
+                .containsExactlyInAnyOrder("Uber al centro", "UBER vuelta");
+        // "%" is literal, not a wildcard.
+        assertThat(search(token, "0%")).extracting(TransactionResponse::description).containsExactly("100% jugo");
+        // The system category name matches too.
+        String categoryName = search(token, "uber").getFirst().categoryName();
+        assertThat(search(token, categoryName.toLowerCase())).hasSize(4);
+    }
+
+    private List<TransactionResponse> search(String token, String text) throws Exception {
+        var result = mockMvc.perform(get("/api/transactions").param("q", text)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readValue(result.getResponse().getContentAsString(), TransactionListResponse.class).data();
+    }
 }

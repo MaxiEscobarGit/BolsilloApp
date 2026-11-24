@@ -105,6 +105,23 @@ public class PurchaseService {
         return toResponse(purchase);
     }
 
+    /**
+     * Pays the next installment ahead of time: an installment counts as paid once its date has passed,
+     * so its date moves to today. It then also counts in this month's spending, which is when the money left.
+     */
+    @Transactional
+    public PurchaseResponse payNextInstallment(UUID userId, UUID id) {
+        var purchase = purchaseRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ApiException("Purchase not found", "NOT_FOUND", 404));
+        LocalDate today = LocalDate.now();
+        var next = transactionRepository
+                .findFirstByPurchaseIdAndDeletedAtIsNullAndTransactionDateAfterOrderByInstallmentNumberAsc(purchase.getId(), today)
+                .orElseThrow(() -> new ApiException("All installments are already paid", "ALL_PAID", 409));
+        next.setTransactionDate(today);
+        transactionRepository.save(next);
+        return toResponse(purchase);
+    }
+
     public List<PurchaseResponse> findAll(UUID userId) {
         return purchaseRepository.findAllByUserId(userId).stream()
                 .map(this::toResponse)

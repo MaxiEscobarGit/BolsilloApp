@@ -76,7 +76,7 @@ export default function Deudas() {
           ) : section === 'deudas' ? (
             <DebtList debts={debts.data!} status={status} setStatus={setStatus} onChange={setDebts} />
           ) : (
-            <PurchaseList purchases={purchases.data!} />
+            <PurchaseList purchases={purchases.data!} onChange={setPurchases} />
           )}
         </ScrollView>
       )}
@@ -186,7 +186,26 @@ function Total({ label, amounts, color }: { label: string; amounts: Record<strin
   );
 }
 
-function PurchaseList({ purchases }: { purchases: Purchase[] }) {
+function PurchaseList({ purchases, onChange }: { purchases: Purchase[]; onChange: (fn: (s: Load<Purchase[]>) => Load<Purchase[]>) => void }) {
+  const [paying, setPaying] = useState<string>();
+  const [failed, setFailed] = useState<{ id: string; message: string }>();
+
+  // Pays the next cuota now: the API moves its date to today, so it counts as paid and in this month's spending.
+  const payNext = async (id: string) => {
+    setPaying(id);
+    setFailed(undefined);
+    try {
+      const updated = await api.post<Purchase>(`/api/purchases/${id}/pay-next`, undefined);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onChange((s) => ({ ...s, data: s.data?.map((p) => (p.id === id ? updated : p)) }));
+    } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setFailed({ id, message: deudasError(e) });
+    } finally {
+      setPaying(undefined);
+    }
+  };
+
   if (purchases.length === 0) {
     return <Notice title="Sin compras en cuotas" body="Cargá una compra en cuotas con el botón + y seguí cuánto te falta pagar." />;
   }
@@ -221,6 +240,8 @@ function PurchaseList({ purchases }: { purchases: Purchase[] }) {
             Próxima cuota: {money(p.paidInstallments === p.totalInstallments - 1 ? p.remainingAmountCents : Math.floor(p.totalAmountCents / p.totalInstallments), p.currency)} el {formatDate(p.nextInstallmentDate)}
           </Text>
         ) : null}
+        {!done ? <Button title="Pagar próxima cuota" kind="ghost" loading={paying === p.id} onPress={() => payNext(p.id)} /> : null}
+        {failed?.id === p.id ? <Text variant="small" style={{ color: colors.coral }}>{failed.message}</Text> : null}
       </Card>
     );
   });

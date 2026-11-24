@@ -1,13 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
 
 import { categoryIcon, formatMoney, isoDate, txError, type Category, type Icon, type Transaction } from '@/components/movimientos/shared';
 import { AddButton, Button, Card, Screen, Select, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
-import { colors, fonts, radius, space } from '@/theme';
+import { colors, fonts, radius, space, type } from '@/theme';
 
 const PAGE = 30;
 const monthName = (d: Date) => d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
@@ -18,6 +18,8 @@ export default function Movimientos() {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [txType, setTxType] = useState<'' | 'EXPENSE' | 'INCOME'>('');
   const [categoryId, setCategoryId] = useState('');
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState(''); // `query` after a short pause, so each keystroke doesn't hit the API
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Transaction[]>();
   const [total, setTotal] = useState(0);
@@ -26,11 +28,18 @@ export default function Movimientos() {
   const requestId = useRef(0);
 
   useEffect(() => { api.get<Category[]>('/api/categories').then(setCategories).catch(() => {}); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   const load = useCallback(async (offset: number) => {
     const id = ++requestId.current; // a newer filter wins over a slower, older response
     const to = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-    const q = new URLSearchParams({ from: isoDate(month), to: isoDate(to), limit: String(PAGE), offset: String(offset) });
+    // A search looks across every month; otherwise the list is the selected month.
+    const q = new URLSearchParams(search ? { q: search } : { from: isoDate(month), to: isoDate(to) });
+    q.set('limit', String(PAGE));
+    q.set('offset', String(offset));
     if (txType) q.set('type', txType);
     if (categoryId) q.set('categoryId', categoryId);
     try {
@@ -42,7 +51,7 @@ export default function Movimientos() {
     } catch (e) {
       if (id === requestId.current) setError(txError(e));
     }
-  }, [month, txType, categoryId]);
+  }, [month, txType, categoryId, search]);
 
   // Reload on focus too: coming back from the add/edit sheet shows the change right away.
   useFocusEffect(useCallback(() => { load(0); }, [load]));
@@ -71,11 +80,17 @@ export default function Movimientos() {
             <AddButton accessibilityLabel="Cargar movimiento" onPress={() => router.push('/movimiento')} />
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -space.md }}>
-            <MonthArrow dir="back" onPress={() => shiftMonth(-1)} />
-            <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.text }}>{monthName(month)}</Text>
-            <MonthArrow dir="forward" disabled={isCurrentMonth} onPress={() => shiftMonth(1)} />
-          </View>
+          <SearchField value={query} onChange={setQuery} />
+
+          {search ? (
+            <Text variant="small" style={{ color: colors.textMuted }}>Resultados de todos los meses</Text>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: -space.md }}>
+              <MonthArrow dir="back" onPress={() => shiftMonth(-1)} />
+              <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.text }}>{monthName(month)}</Text>
+              <MonthArrow dir="forward" disabled={isCurrentMonth} onPress={() => shiftMonth(1)} />
+            </View>
+          )}
 
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             <View style={{ flex: 1 }}>
@@ -117,7 +132,7 @@ export default function Movimientos() {
             <View style={{ alignItems: 'center', gap: space.md, paddingTop: space.xl }}>
               <Text variant="heading">Nada por acá</Text>
               <Text style={{ color: colors.textMuted, textAlign: 'center' }}>
-                No hay movimientos en {monthName(month)}{txType || categoryId ? ' con estos filtros' : ''}.
+                {search ? `Ningún movimiento dice "${search}".` : `No hay movimientos en ${monthName(month)}${txType || categoryId ? ' con estos filtros' : ''}.`}
               </Text>
               <Button title="Cargar movimiento" onPress={() => router.push('/movimiento')} />
             </View>
@@ -189,5 +204,30 @@ function Row({ tx, icon }: { tx: Transaction; icon: Icon }) {
         )}
       </View>
     </Pressable>
+  );
+}
+
+// Free-text search over description and category name. The clear button only shows with text.
+function SearchField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.surface }}>
+      <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }} size={16} tintColor={colors.textMuted} />
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder="Buscar: uber, super, alquiler…"
+        placeholderTextColor={colors.textFaint}
+        selectionColor={colors.green}
+        returnKeyType="search"
+        autoCorrect={false}
+        accessibilityLabel="Buscar movimientos"
+        style={[type.body, { flex: 1, color: colors.text, paddingVertical: space.sm }]}
+      />
+      {value ? (
+        <Pressable onPress={() => onChange('')} accessibilityRole="button" accessibilityLabel="Borrar búsqueda" hitSlop={10}>
+          <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' }} size={16} tintColor={colors.textMuted} />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
