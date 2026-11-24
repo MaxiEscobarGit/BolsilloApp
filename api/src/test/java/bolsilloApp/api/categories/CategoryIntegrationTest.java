@@ -209,4 +209,92 @@ class CategoryIntegrationTest extends AbstractIntegrationTest {
                 Integer.class, otrosId);
         assertThat(otrosCount).isGreaterThanOrEqualTo(1);
     }
+
+    // T-CAT-09
+    @Test
+    void editarCategoriaCustomCambiaNombreIconoYColor() throws Exception {
+        String token = registerAndGetToken();
+        UUID id = createCategory(token, "Mascota");
+
+        var result = mockMvc.perform(patch("/api/categories/" + id)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Perro","emoji":"pawprint","colorHex":"#00FF85"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var updated = objectMapper.readValue(result.getResponse().getContentAsString(), CategoryResponse.class);
+        assertThat(updated.name()).isEqualTo("Perro");
+        assertThat(updated.emoji()).isEqualTo("pawprint");
+        assertThat(updated.colorHex()).isEqualTo("#00FF85");
+        assertThat(updated.type()).isEqualTo(CategoryType.EXPENSE);
+    }
+
+    // T-CAT-10
+    @Test
+    void editarCategoriaDelSistemaDevuelve403() throws Exception {
+        String token = registerAndGetToken();
+        UUID systemCatId = getSystemExpenseCategoryId();
+
+        mockMvc.perform(patch("/api/categories/" + systemCatId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Hack","emoji":"tag","colorHex":"#000000"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    // T-CAT-11
+    @Test
+    void editarCategoriaDeOtroUsuarioDevuelve404() throws Exception {
+        String tokenA = registerAndGetToken("a@test.com");
+        String tokenB = registerAndGetToken("b@test.com");
+        UUID idA = createCategory(tokenA, "Privada");
+
+        mockMvc.perform(patch("/api/categories/" + idA)
+                        .header("Authorization", "Bearer " + tokenB)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Robada","emoji":"tag","colorHex":"#000000"}
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    // T-CAT-12
+    @Test
+    void renombrarAUnNombreExistenteDevuelve409YMismoNombreEsValido() throws Exception {
+        String token = registerAndGetToken();
+        createCategory(token, "Gimnasio");
+        UUID id = createCategory(token, "Club");
+
+        mockMvc.perform(patch("/api/categories/" + id)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"gimnasio","emoji":"tag","colorHex":"#000000"}
+                                """))
+                .andExpect(status().isConflict());
+
+        // Keeping its own name while changing only the color is not a duplicate.
+        mockMvc.perform(patch("/api/categories/" + id)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Club","emoji":"tag","colorHex":"#FF6B50"}
+                                """))
+                .andExpect(status().isOk());
+    }
+
+    private UUID createCategory(String token, String name) throws Exception {
+        var result = mockMvc.perform(post("/api/categories")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(TestDataFactory.categoryRequest(name))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readValue(result.getResponse().getContentAsString(), CategoryResponse.class).id();
+    }
 }

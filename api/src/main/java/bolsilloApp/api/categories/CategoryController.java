@@ -3,6 +3,7 @@ package bolsilloApp.api.categories;
 import bolsilloApp.api.auth.model.User;
 import bolsilloApp.api.categories.dto.CategoryResponse;
 import bolsilloApp.api.categories.dto.CreateCategoryRequest;
+import bolsilloApp.api.categories.dto.UpdateCategoryRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,14 @@ public class CategoryController {
             @AuthenticationPrincipal User currentUser,
             @Valid @RequestBody CreateCategoryRequest request) {
         return ResponseEntity.status(201).body(categoryService.create(currentUser.getId(), request));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<CategoryResponse> update(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCategoryRequest request) {
+        return ResponseEntity.ok(categoryService.update(currentUser.getId(), id, request));
     }
 
     @DeleteMapping("/{id}")

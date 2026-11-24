@@ -17,6 +17,7 @@ type Summary = {
   totalIncomeCents: number;
   balanceCents: number;
   byCategory: { categoryName: string; type: 'EXPENSE' | 'INCOME'; totalCents: number }[];
+  dailyTotals: { date: string; expenseCents: number; incomeCents: number }[];
   vsPreviousPeriod: { expenseChangePercent: number | null } | null;
 };
 
@@ -55,7 +56,7 @@ export default function Inicio() {
   const change = summary?.vsPreviousPeriod?.expenseChangePercent ?? null;
 
   // Above the fold on a 375×812 iPhone: 24 top + 56 greeting + 16 + 102 balance + 16 + 92 row + 16 + 92 row = 414 pt,
-  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). Deudas y cuotas and the categories sit below it.
+  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The daily chart, Deudas y cuotas and the categories sit below it.
   return (
     <Screen>
       {(topInset) => (
@@ -88,6 +89,8 @@ export default function Inicio() {
             />
           </View>
 
+          {summary ? <DailyChart days={summary.dailyTotals} /> : null}
+
           <DebtsCard debts={debts} purchases={purchases} error={debtsError} />
 
           <Card style={{ gap: space.md }}>
@@ -111,6 +114,60 @@ export default function Inicio() {
         </ScrollView>
       )}
     </Screen>
+  );
+}
+
+// Spending per day of the current month: one bar per day, the API only sends days with movements.
+// Tapping a bar shows that day's total; today is selected at first. Future days are faint stubs.
+function DailyChart({ days }: { days: Summary['dailyTotals'] }) {
+  const now = new Date();
+  const today = now.getDate();
+  const length = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const byDay = new Map(days.map((d) => [Number(d.date.slice(8, 10)), d.expenseCents]));
+  const values = Array.from({ length }, (_, i) => byDay.get(i + 1) ?? 0);
+  const max = Math.max(1, ...values);
+  const [picked, setPicked] = useState(today);
+  const total = values[picked - 1];
+  const month = now.toLocaleDateString('es-AR', { month: 'long' });
+
+  return (
+    <Card style={{ gap: space.md }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Text variant="label">Gasto por día</Text>
+        <Text variant="small" style={{ color: colors.textMuted }}>
+          {picked === today ? 'Hoy' : `${picked} de ${month}`}: <Text variant="small" style={{ color: total ? colors.coral : colors.textMuted }}>{formatCents(total)}</Text>
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 88, gap: 2 }} accessibilityLabel="Gasto por día del mes">
+        {values.map((v, i) => {
+          const day = i + 1;
+          const future = day > today;
+          const on = day === picked;
+          return (
+            <Pressable
+              key={day}
+              onPress={() => !future && setPicked(day)}
+              disabled={future}
+              accessibilityLabel={`${day}: ${formatCents(v)}`}
+              hitSlop={{ top: 8, bottom: 8 }}
+              style={{ flex: 1, height: '100%', justifyContent: 'flex-end' }}>
+              <View
+                style={{
+                  height: future ? 2 : Math.max(2, (v / max) * 88),
+                  borderRadius: 2,
+                  backgroundColor: future ? colors.surfaceHigh : on ? colors.coral : v ? 'rgba(255, 107, 80, 0.45)' : colors.surfaceHigh,
+                }}
+              />
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        {[1, 8, 15, 22, length].map((d) => (
+          <Text key={d} variant="small" style={{ fontSize: 11, lineHeight: 14, color: colors.textFaint }}>{d}</Text>
+        ))}
+      </View>
+    </Card>
   );
 }
 

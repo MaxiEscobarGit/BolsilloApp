@@ -3,6 +3,7 @@ package bolsilloApp.api.categories;
 import bolsilloApp.api.auth.model.User;
 import bolsilloApp.api.categories.dto.CategoryResponse;
 import bolsilloApp.api.categories.dto.CreateCategoryRequest;
+import bolsilloApp.api.categories.dto.UpdateCategoryRequest;
 import bolsilloApp.api.categories.model.Category;
 import bolsilloApp.api.shared.exception.ApiException;
 import bolsilloApp.api.transactions.TransactionRepository;
@@ -40,6 +41,30 @@ public class CategoryService {
                 .type(request.type())
                 .isSystem(false)
                 .build();
+        return toResponse(categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponse update(UUID userId, UUID categoryId, UpdateCategoryRequest request) {
+        var category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ApiException("Category not found", "NOT_FOUND", 404));
+
+        if (category.getIsSystem()) {
+            throw new ApiException("Cannot edit system category", "FORBIDDEN", 403);
+        }
+
+        if (category.getUser() == null || !category.getUser().getId().equals(userId)) {
+            throw new ApiException("Category not found", "NOT_FOUND", 404);
+        }
+
+        boolean renamed = !category.getName().equalsIgnoreCase(request.name());
+        if (renamed && categoryRepository.existsByUserIdAndNameIgnoreCaseAndType(userId, request.name(), category.getType())) {
+            throw new ApiException("Category with this name already exists", "CATEGORY_DUPLICATE", 409);
+        }
+
+        category.setName(request.name());
+        category.setEmoji(request.emoji());
+        category.setColorHex(request.colorHex());
         return toResponse(categoryRepository.save(category));
     }
 

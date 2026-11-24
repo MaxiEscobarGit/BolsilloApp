@@ -23,6 +23,9 @@ export const colors = {
 } as const;
 
 // Loaded in src/app/_layout.tsx with @expo-google-fonts.
+// Colors a user can give their own categories (icon tint in lists). Brand green and coral first.
+export const categoryColors = ['#00FF85', '#FF6B50', '#4DA3FF', '#B98CFF', '#FFC145', '#FF7EB6', '#3DDCCB', '#A3A5A4'] as const;
+
 export const fonts = {
   regular: 'Geist_400Regular',
   medium: 'Geist_500Medium',

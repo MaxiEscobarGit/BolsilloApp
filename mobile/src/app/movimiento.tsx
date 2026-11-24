@@ -166,7 +166,7 @@ export default function MovimientoSheet() {
             <Text variant="label">Categoría</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
               {categories.filter((c) => txType === 'DEBT' || c.type === txType).map((c) => (
-                <Chip key={c.id} label={c.name} icon={categoryIcon(c.name)} selected={picked === c.id} onPress={() => setCategoryId(c.id)} />
+                <Chip key={c.id} label={c.name} icon={categoryIcon(c.name, c.emoji)} selected={picked === c.id} onPress={() => setCategoryId(c.id)} />
               ))}
             </View>
             {tried && invalid.category ? <Text variant="small" style={{ color: colors.coral }}>{invalid.category}</Text> : null}
