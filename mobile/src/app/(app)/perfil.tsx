@@ -3,9 +3,11 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
-import { categoryIcon, type Category } from '@/components/movimientos/shared';
-import { Button, Card, Screen, Text, useBottomBarInset } from '@/components/ui';
+import { Segmented } from '@/components/deudas/shared';
+import { categoryIcon, haptic, type Category } from '@/components/movimientos/shared';
+import { Button, Card, Screen, Select, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
+import { formatDate } from '@/lib/dates';
 import { errorMessage } from '@/lib/errors';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/theme';
@@ -61,14 +63,99 @@ export default function Perfil() {
             <Button title="Nueva categoría" kind="ghost" onPress={() => router.push('/categoria')} />
           </Card>
 
-          <Card>
-            <Text variant="small" style={{ color: colors.textMuted }}>
-              Moneda, cotización preferida y notificaciones van a vivir acá.
-            </Text>
-          </Card>
+          <Settings />
           <Button title="Cerrar sesión" kind="ghost" onPress={logout} />
         </ScrollView>
       )}
     </Screen>
+  );
+}
+
+// Mirrors api/.../users/dto/UserProfileResponse.java.
+type Profile = {
+  defaultCurrency: 'ARS' | 'USD';
+  preferredExchangeSource: Source;
+  aiMessagesUsed: number;
+  aiMessagesLimit: number;
+  aiMessagesResetAt: string;
+};
+type Source = 'oficial' | 'blue' | 'mep' | 'tarjeta';
+const sources: { value: Source; label: string }[] = [
+  { value: 'blue', label: 'Blue' },
+  { value: 'oficial', label: 'Oficial' },
+  { value: 'mep', label: 'MEP' },
+  { value: 'tarjeta', label: 'Tarjeta' },
+];
+
+// Each choice saves right away (no save button): optimistic, rolled back if the API refuses it.
+function Settings() {
+  const [profile, setProfile] = useState<Profile>();
+  const [error, setError] = useState<string>();
+
+  useFocusEffect(useCallback(() => {
+    api.get<Profile>('/api/users/me').then((p) => { setProfile(p); setError(undefined); }).catch((e) => setError(errorMessage(e)));
+  }, []));
+
+  const save = async (change: Partial<Profile>) => {
+    if (!profile) return;
+    const before = profile;
+    setProfile({ ...profile, ...change });
+    haptic.select();
+    try {
+      setProfile(await api.patch<Profile>('/api/users/me', change));
+      setError(undefined);
+    } catch (e) {
+      setProfile(before);
+      haptic.error();
+      setError(errorMessage(e));
+    }
+  };
+
+  if (!profile) {
+    return error ? <Card><Text variant="small" style={{ color: colors.coral }}>{error}</Text></Card> : null;
+  }
+  const used = Math.min(profile.aiMessagesUsed, profile.aiMessagesLimit);
+  const left = profile.aiMessagesLimit - used;
+
+  return (
+    <Card style={{ gap: space.lg }}>
+      <Text variant="label">Ajustes</Text>
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="small" style={{ color: colors.textMuted }}>Moneda al cargar un movimiento</Text>
+        <Segmented
+          options={[{ value: 'ARS', label: 'Pesos' }, { value: 'USD', label: 'Dólares' }]}
+          value={profile.defaultCurrency}
+          onChange={(defaultCurrency) => save({ defaultCurrency })}
+        />
+      </View>
+
+      <View style={{ gap: space.xs }}>
+        <Select
+          label="Cotización para gastos en dólares"
+          value={profile.preferredExchangeSource}
+          options={sources}
+          onChange={(preferredExchangeSource) => save({ preferredExchangeSource })}
+        />
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text variant="small" style={{ color: colors.textMuted }}>Mensajes del asistente</Text>
+          <Text variant="small" style={{ color: left === 0 ? colors.coral : colors.text }}>{used} de {profile.aiMessagesLimit}</Text>
+        </View>
+        <View
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: profile.aiMessagesLimit, now: used }}
+          style={{ height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' }}>
+          <View style={{ width: `${(used / profile.aiMessagesLimit) * 100}%`, height: '100%', backgroundColor: left === 0 ? colors.coral : colors.green }} />
+        </View>
+        <Text variant="small" style={{ color: colors.textFaint }}>
+          {left === 0 ? 'Ya usaste todos.' : `Te quedan ${left}.`} Se renuevan el {formatDate(profile.aiMessagesResetAt.slice(0, 10))}.
+        </Text>
+      </View>
+
+      {error ? <Text variant="small" style={{ color: colors.coral }}>{error}</Text> : null}
+    </Card>
   );
 }
