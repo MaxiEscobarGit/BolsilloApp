@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Segmented } from '@/components/deudas/shared';
-import { categoryIcon, haptic, type Category } from '@/components/movimientos/shared';
+import { categoryIcon, formatMoney, haptic, type Category, type Recurring } from '@/components/movimientos/shared';
 import { Button, Card, Screen, Select, Text, useBottomBarInset } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/dates';
@@ -16,6 +16,7 @@ export default function Perfil() {
   const { user, logout } = useSession();
   const bottomInset = useBottomBarInset();
   const [mine, setMine] = useState<Category[]>();
+  const [fijos, setFijos] = useState<Recurring[]>();
   const [error, setError] = useState<string>();
 
   // Reloads when the category sheet closes.
@@ -23,6 +24,7 @@ export default function Perfil() {
     api.get<Category[]>('/api/categories')
       .then((list) => { setMine(list.filter((c) => !c.isSystem)); setError(undefined); })
       .catch((e) => setError(errorMessage(e)));
+    api.get<Recurring[]>('/api/recurring').then(setFijos).catch((e) => setError(errorMessage(e)));
   }, []));
 
   return (
@@ -61,6 +63,33 @@ export default function Perfil() {
               </Pressable>
             ))}
             <Button title="Nueva categoría" kind="ghost" onPress={() => router.push('/categoria')} />
+          </Card>
+
+          <Card style={{ gap: space.md }}>
+            <Text variant="label">Fijos de cada mes</Text>
+            {fijos?.length === 0 ? (
+              <Text variant="small" style={{ color: colors.textMuted }}>
+                Alquiler, servicios o el sueldo: cargalos una vez y se agregan solos todos los meses.
+              </Text>
+            ) : null}
+            {fijos?.map((f) => (
+              <Pressable
+                key={f.id}
+                onPress={() => router.push({ pathname: '/fijo', params: { id: f.id } })}
+                accessibilityRole="button"
+                accessibilityLabel={`Editar ${f.description}`}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44, opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1}>{f.description}</Text>
+                  <Text variant="small" style={{ color: colors.textMuted }}>Día {f.dayOfMonth} · {f.categoryName}</Text>
+                </View>
+                <Text variant="small" style={{ color: f.type === 'INCOME' ? colors.green : colors.coral }}>
+                  {f.type === 'INCOME' ? '+' : '−'}{formatMoney(f.amountCents, f.currency)}
+                </Text>
+                <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={14} tintColor={colors.textFaint} />
+              </Pressable>
+            ))}
+            <Button title="Nuevo fijo" kind="ghost" onPress={() => router.push('/fijo')} />
           </Card>
 
           <Settings />

@@ -167,7 +167,7 @@ function MonthArrow({ dir, disabled, onPress }: { dir: 'back' | 'forward'; disab
 
 function Row({ tx, icon }: { tx: Transaction; icon: Icon }) {
   const income = tx.type === 'INCOME';
-  const tags = [tx.source === 'CHAT' && 'Chat', tx.installmentNumber && `Cuota ${tx.installmentNumber}`].filter(Boolean) as string[];
+  const tags = [tx.source === 'CHAT' && 'Chat', tx.source === 'RECURRING' && 'Fijo', tx.installmentNumber && `Cuota ${tx.installmentNumber}`].filter(Boolean) as string[];
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/movimiento', params: { id: tx.id } })}
