@@ -63,7 +63,7 @@ export default function Inicio() {
   const change = summary?.vsPreviousPeriod?.expenseChangePercent ?? null;
 
   // Above the fold on a 375×812 iPhone: 24 top + 56 greeting + 16 + 102 balance + 16 + 92 row + 16 + 92 row = 414 pt,
-  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The assistant's summary, budgets, goals, the daily chart, Deudas y cuotas and the categories sit below it.
+  // under the 669 pt left after the top safe area (~59) and the bottom bar (~84). The daily chart, Deudas y cuotas, the categories, the assistant's summary, budgets and goals sit below it.
   return (
     <Screen>
       {(topInset) => (
@@ -96,12 +96,6 @@ export default function Inicio() {
             />
           </View>
 
-          <SummaryCard />
-
-          {budgets ? <BudgetsCard budgets={budgets} /> : null}
-
-          {goals ? <GoalsCard goals={goals} /> : null}
-
           {summary ? <DailyChart days={summary.dailyTotals} /> : null}
 
           <DebtsCard debts={debts} purchases={purchases} error={debtsError} />
@@ -124,6 +118,12 @@ export default function Inicio() {
               ))
             )}
           </Card>
+
+          <SummaryCard />
+
+          {budgets ? <BudgetsCard budgets={budgets} /> : null}
+
+          {goals ? <GoalsCard goals={goals} /> : null}
         </ScrollView>
       )}
     </Screen>
