@@ -1,15 +1,70 @@
 # Avisos semanales de dependencias desactualizadas o vulnerables (seguridad: SDKs al día).
+# Los patches se agrupan en un solo PR por ecosistema para no spamear; minors y majors
+# llegan por separado. Las alertas de seguridad (Dependabot security updates) no
+# dependen de este schedule: se abren apenas se publica el advisory.
 version: 2
 updates:
+  # ─── Backend (Spring Boot) ───────────────────────────
   - package-ecosystem: maven
     directory: /api
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Argentina/Buenos_Aires }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(api)" }
+    groups:
+      maven-patches:
+        update-types: [patch]
+
+  # ─── App (Expo) ──────────────────────────────────────
+  # El SDK de Expo / React Native se mueve en bloque y en las versiones que pide
+  # `npx expo install --check`; el cambio de SDK (major de expo, minor de RN) se
+  # hace a mano con `npx expo install expo@^NN --fix`.
   - package-ecosystem: npm
     directory: /mobile
-    schedule: { interval: weekly }
-  - package-ecosystem: github-actions
-    directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Argentina/Buenos_Aires }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(mobile)" }
+    groups:
+      expo-sdk:
+        patterns: ["expo", "expo-*", "@expo/*", "react", "react-dom", "react-native", "react-native-*", "@react-native-*/*", "@types/react"]
+        update-types: [patch, minor]
+      npm-patches:
+        update-types: [patch]
+    ignore:
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  # ─── Imágenes base ───────────────────────────────────
   - package-ecosystem: docker
     directory: /api
-    schedule: { interval: weekly }
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Argentina/Buenos_Aires }
+    commit-message: { prefix: "deps(docker)" }
+    groups:
+      docker-patches:
+        update-types: [patch]
+
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Argentina/Buenos_Aires }
+    commit-message: { prefix: "deps(deploy)" }
+    groups:
+      compose-patches:
+        update-types: [patch]
+
+  # ─── CI ──────────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/Argentina/Buenos_Aires }
+    commit-message: { prefix: "deps(ci)" }
+    groups:
+      actions:
+        update-types: [patch, minor]
