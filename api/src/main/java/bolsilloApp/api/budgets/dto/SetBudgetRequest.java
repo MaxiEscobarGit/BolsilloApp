@@ -1,9 +1,8 @@
 package bolsilloApp.api.budgets.dto;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 
 // Monthly cap in pesos.
-public record SetBudgetRequest(@NotNull @Positive BigDecimal amount) {}
+public record SetBudgetRequest(@NotNull @Positive @DecimalMax("10000000000") BigDecimal amount) {}

@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class ProdProfileStartupTest {
 
-    private static final String VALID_SECRET = "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=";
+    private static final String VALID_SECRET = "VeXMQ6A+cW12vbKPyAkrddkRl3o3Y24XBcd7jqTawC0=";
 
     @Test
     void prodArrancaConTodasLasVariables() {
@@ -51,6 +51,12 @@ class ProdProfileStartupTest {
     void prodConAnthropicKeyPlaceholderNoArranca() {
         assertThatThrownBy(() -> start(Map.of("ANTHROPIC_API_KEY", "sk-ant-placeholder")).close())
                 .rootCause().hasMessageContaining("ANTHROPIC_API_KEY");
+    }
+
+    @Test
+    void prodConJwtSecretDeDesarrolloNoArranca() {
+        assertThatThrownBy(() -> start(Map.of("JWT_SECRET", "hH4d9Xa3M5mskNX0MCXF1+OkKUFPg3nllFdSydPyXv0=")).close())
+                .rootCause().hasMessageContaining("desarrollo");
     }
 
     @Test
