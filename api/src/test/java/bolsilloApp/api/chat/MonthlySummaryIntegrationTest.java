@@ -43,14 +43,14 @@ class MonthlySummaryIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(TestDataFactory.transactionRequest(getSystemExpenseCategoryId(), new BigDecimal("4500"), TransactionType.EXPENSE, LocalDate.now()))))
                 .andExpect(status().isCreated());
-        doReturn(aiJson("Venís gastando $4.500 en comida.")).when(aiService).sendMessage(anyString(), anyString(), anyString());
+        doReturn(aiJson("Venís gastando $4.500 en comida.")).when(aiService).sendMessage(anyString(), anyString(), anyString(), anyBoolean());
 
         mockMvc.perform(post("/api/chat/monthly-summary").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.summary").value("Venís gastando $4.500 en comida."));
 
         ArgumentCaptor<String> user = ArgumentCaptor.forClass(String.class);
-        verify(aiService).sendMessage(eq("claude-sonnet-5-5"), anyString(), user.capture());
+        verify(aiService).sendMessage(eq("claude-sonnet-5-5"), anyString(), user.capture(), eq(false));
         assertThat(user.getValue()).contains("este mes").contains("el mes pasado").contains("Comida=$4500");
         assertThat(used()).isEqualTo(1);
     }
@@ -62,12 +62,12 @@ class MonthlySummaryIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/api/chat/monthly-summary").header("Authorization", "Bearer " + token))
                 .andExpect(status().isTooManyRequests());
 
-        verify(aiService, never()).sendMessage(anyString(), anyString(), anyString());
+        verify(aiService, never()).sendMessage(anyString(), anyString(), anyString(), anyBoolean());
     }
 
     @Test
     void siLaIAFallaDevuelve503YNoCobra() throws Exception {
-        doThrow(new RuntimeException("boom")).when(aiService).sendMessage(anyString(), anyString(), anyString());
+        doThrow(new RuntimeException("boom")).when(aiService).sendMessage(anyString(), anyString(), anyString(), anyBoolean());
 
         mockMvc.perform(post("/api/chat/monthly-summary").header("Authorization", "Bearer " + token))
                 .andExpect(status().isServiceUnavailable());

@@ -113,7 +113,7 @@ Variables obligatorias en Railway:
 - `DATABASE_USER`
 - `DATABASE_PASSWORD`
 - `JWT_SECRET`
-- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_API_KEY` (o `GEMINI_API_KEY` si `AI_PROVIDER=gemini`; solo una de las dos)
 - `CORS_ALLOWED_ORIGINS` (orígenes web permitidos, separados por coma)
 
 `PORT` lo inyecta Railway. El `docker compose` local fuerza `SPRING_PROFILES_ACTIVE=dev`.

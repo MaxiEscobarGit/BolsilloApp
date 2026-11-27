@@ -8,8 +8,12 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${anthropic.api-key}")
+    // Sin default fallido: en prod ProdSecretsValidator exige solo la key del proveedor elegido.
+    @Value("${anthropic.api-key:}")
     private String anthropicApiKey;
+
+    @Value("${gemini.api-key:}")
+    private String geminiApiKey;
 
     @Bean
     public WebClient anthropicWebClient() {
@@ -17,6 +21,14 @@ public class WebClientConfig {
                 .baseUrl("https://api.anthropic.com")
                 .defaultHeader("x-api-key", anthropicApiKey)
                 .defaultHeader("anthropic-version", "2023-06-01")
+                .build();
+    }
+
+    @Bean
+    public WebClient geminiWebClient() {
+        return WebClient.builder()
+                .baseUrl("https://generativelanguage.googleapis.com")
+                .defaultHeader("x-goog-api-key", geminiApiKey)
                 .build();
     }
 }
