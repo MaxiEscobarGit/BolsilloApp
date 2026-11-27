@@ -23,7 +23,9 @@ public class ProdSecretsValidator implements InitializingBean {
     // Secrets de desarrollo publicados en el repo (docker-compose.yml y application-dev.properties).
     static final java.util.Set<String> DEV_JWT_SECRETS = java.util.Set.of(
             "hH4d9Xa3M5mskNX0MCXF1+OkKUFPg3nllFdSydPyXv0=",
-            "j+ERL/9Om19ZbERIadbopvgahYXwMAbYNo2bOkcGym4=");
+            "j+ERL/9Om19ZbERIadbopvgahYXwMAbYNo2bOkcGym4=",
+            // secret de los tests (base64 de "0123456789...", publicado en el repo)
+            "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=");
 
     public ProdSecretsValidator(
             @Value("${anthropic.api-key}") String anthropicApiKey,

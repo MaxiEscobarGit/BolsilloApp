@@ -9,7 +9,7 @@ import java.util.UUID;
 // Days stop at 28 so every month has the date.
 public record RecurringRequest(
         @NotNull TransactionType type,
-        @NotNull @Positive BigDecimal amount,
+        @NotNull @Positive @DecimalMax("10000000000") BigDecimal amount,
         @Pattern(regexp = "ARS|USD", message = "Must be ARS or USD") String currency,
         @NotBlank @Size(max = 500) String description,
         @NotNull UUID categoryId,

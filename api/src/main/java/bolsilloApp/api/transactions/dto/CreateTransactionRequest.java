@@ -1,20 +1,18 @@
 package bolsilloApp.api.transactions.dto;
 
 import bolsilloApp.api.transactions.TransactionType;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
 public record CreateTransactionRequest(
-        @NotNull @Positive BigDecimal amount,
+        @NotNull @Positive @DecimalMax("10000000000") BigDecimal amount,
         @NotNull TransactionType type,
-        @NotBlank String description,
+        @NotBlank @Size(max = 500) String description,
         @NotNull UUID categoryId,
         @NotNull LocalDate transactionDate,
-        String currency,
-        BigDecimal exchangeRate
+        @Pattern(regexp = "^([A-Za-z]{3})?$", message = "Must be a 3-letter currency code") String currency,
+        @Positive @DecimalMax("1000000") BigDecimal exchangeRate
 ) {}

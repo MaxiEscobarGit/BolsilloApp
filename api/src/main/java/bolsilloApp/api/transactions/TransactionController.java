@@ -38,7 +38,7 @@ public class TransactionController {
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(defaultValue = "0") int offset) {
-        return ResponseEntity.ok(transactionService.findAll(currentUser.getId(), from, to, categoryId, type, q, limit, offset));
+        return ResponseEntity.ok(transactionService.findAll(currentUser.getId(), from, to, categoryId, type, q, Math.max(1, limit), Math.max(0, offset)));
     }
 
     @GetMapping(value = "/export", produces = "text/csv")
@@ -63,7 +63,7 @@ public class TransactionController {
     public ResponseEntity<TransactionResponse> update(
             @AuthenticationPrincipal User currentUser,
             @PathVariable UUID id,
-            @RequestBody UpdateTransactionRequest request) {
+            @Valid @RequestBody UpdateTransactionRequest request) {
         return ResponseEntity.ok(transactionService.update(currentUser.getId(), id, request));
     }
 

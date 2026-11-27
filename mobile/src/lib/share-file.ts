@@ -14,5 +14,10 @@ export async function shareTextFile(name: string, text: string, mimeType: string
   const file = new File(Paths.cache, name);
   if (file.exists) file.delete();
   await file.write(text);
-  await Sharing.shareAsync(file.uri, { mimeType, UTI: 'public.comma-separated-values-text', dialogTitle: name });
+  try {
+    await Sharing.shareAsync(file.uri, { mimeType, UTI: 'public.comma-separated-values-text', dialogTitle: name });
+  } finally {
+    // The export holds the user's movements: don't leave it in the cache once shared.
+    if (file.exists) file.delete();
+  }
 }

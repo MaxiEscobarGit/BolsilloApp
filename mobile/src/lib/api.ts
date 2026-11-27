@@ -32,7 +32,7 @@ export class ApiError extends Error {
 let webRefresh: string | null = null;
 export const refreshStore = {
   get: () => (Platform.OS === 'web' ? Promise.resolve(webRefresh) : SecureStore.getItemAsync(REFRESH_KEY)),
-  set: (v: string) => (Platform.OS === 'web' ? ((webRefresh = v), Promise.resolve()) : SecureStore.setItemAsync(REFRESH_KEY, v)),
+  set: (v: string) => (Platform.OS === 'web' ? ((webRefresh = v), Promise.resolve()) : SecureStore.setItemAsync(REFRESH_KEY, v, { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY })),
   clear: () => (Platform.OS === 'web' ? ((webRefresh = null), Promise.resolve()) : SecureStore.deleteItemAsync(REFRESH_KEY)),
 };
 

@@ -1,0 +1,138 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  image:
+    # Build + Trivy en PRs tambien (sin push); publica solo en push a main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+      tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - id: vars
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/bolsillo-api" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build (local, para escanear)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: api
+          load: true
+          tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy (falla en CRITICAL/HIGH con fix disponible)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Login a GHCR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag "${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}" "${{ steps.vars.outputs.image }}:latest"
+          docker push "${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}"
+          docker push "${{ steps.vars.outputs.image }}:latest"
+
+  deploy:
+    # Apagado hasta que exista el VPS: activar con la variable de repo DEPLOY_ENABLED=true
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    needs: [gitleaks, image]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Preparar SSH (known_hosts pinneado)
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_deploy ~/.ssh/known_hosts
+
+      - name: Copiar compose, Caddyfile y backup.sh
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/id_deploy -o StrictHostKeyChecking=yes -o BatchMode=yes"
+          $SSH "$VPS_USER@$VPS_HOST" 'mkdir -p ~/bolsillo/deploy/web'
+          scp -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            deploy/docker-compose.prod.yml deploy/Caddyfile deploy/backup.sh \
+            "$VPS_USER@$VPS_HOST:~/bolsillo/deploy/"
+
+      - name: Pull + up
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          API_TAG: ${{ needs.image.outputs.tag }}
+        run: |
+          # el token viaja por stdin, no en la linea de comandos
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            "$VPS_USER@$VPS_HOST" "docker login ghcr.io -u '$GHCR_USER' --password-stdin \
+            && cd ~/bolsillo/deploy \
+            && API_TAG='$API_TAG' docker compose -f docker-compose.prod.yml --env-file .env pull api caddy postgres \
+            && API_TAG='$API_TAG' docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans \
+            && docker logout ghcr.io \
+            && docker image prune -f"
+
+      - name: Verificar /actuator/health por HTTPS
+        env:
+          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 10 "https://$VPS_DOMAIN/actuator/health" | grep -q '"UP"'; then
+              echo "health OK"; exit 0
+            fi
+            sleep 10
+          done
+          echo "health FAIL"; exit 1

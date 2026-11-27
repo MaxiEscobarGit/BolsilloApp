@@ -1,0 +1,52 @@
+{
+	email {$ACME_EMAIL}
+	# Para probar en local sin Let's Encrypt: DOMAIN=localhost (Caddy usa su CA interna)
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	tls {
+		protocols tls1.2 tls1.3
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Solo cuando estes seguro de que todo el dominio va por HTTPS para siempre:
+		# Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Expo web exporta JS/CSS propios; estilos inline de react-native-web
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	request_body {
+		max_size 2MB
+	}
+
+	# Actuator no se expone salvo health
+	@health path /actuator/health /actuator/health/*
+	handle @health {
+		reverse_proxy api:8080
+	}
+	handle /actuator/* {
+		respond 404
+	}
+
+	# Rate limit en /api/auth/*: Caddy estandar no lo trae. Opcional: compilar con xcaddy
+	# (github.com/mholt/caddy-ratelimit) y agregar aca un bloque `rate_limit`. Mientras tanto
+	# aplica el throttle de la propia API (por eso la API NO publica puertos: Caddy pisa X-Forwarded-For).
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Web estatica con fallback SPA
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

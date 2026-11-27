@@ -1,18 +1,16 @@
 package bolsilloApp.api.debts.dto;
 
 import bolsilloApp.api.debts.DebtDirection;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record CreateDebtRequest(
-        @NotBlank String counterpartName,
-        @NotNull @Positive BigDecimal amount,
+        @NotBlank @Size(max = 200) String counterpartName,
+        @NotNull @Positive @DecimalMax("10000000000") BigDecimal amount,
         @NotNull DebtDirection direction,
-        String description,
+        @Size(max = 500) String description,
         LocalDate dueDate,
-        String currency
+        @Pattern(regexp = "^([A-Za-z]{3})?$", message = "Must be a 3-letter currency code") String currency
 ) {}

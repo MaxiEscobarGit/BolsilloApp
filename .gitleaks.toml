@@ -1,0 +1,7 @@
+# Reglas por defecto de gitleaks + excepciones para secretos de test (no son credenciales reales).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Secretos falsos de tests"
+paths = ['''^api/src/test/''']
