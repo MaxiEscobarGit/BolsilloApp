@@ -50,6 +50,8 @@ services:
       DATABASE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-hH4d9Xa3M5mskNX0MCXF1+OkKUFPg3nllFdSydPyXv0=}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-sk-ant-placeholder}
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "8080:8080"
     depends_on:

@@ -24,7 +24,7 @@ Este directorio (`api/`) es el backend. La app (mobile first, Expo / React Nativ
 | HTTP client     | WebFlux `WebClient` (solo para llamar a Anthropic)                         |
 | Config local    | `spring-dotenv` 4.0.0 (carga `api/.env` como properties)                   |
 | Boilerplate     | Lombok                                                                     |
-| AI              | Anthropic API — Haiku para parseo, Sonnet para análisis                    |
+| AI              | Anthropic API — Haiku para parseo, Sonnet para análisis (o Gemini, ver abajo) |
 | Tests           | JUnit 5 · MockMvc · Testcontainers 1.20.4 (`postgres:16-alpine`)           |
 | App             | Expo / React Native en `mobile/` (mobile first; web vía Expo web)          |
 | Despliegue      | Railway (backend) · Supabase (DB)                                          |
@@ -285,7 +285,7 @@ consenso** — afecta costos de API y precisión.
    - empieza con ¿ o pregunta        → intent: `QUERY`    → modelo: Sonnet
    - menciona "eso era" / "no era"   → intent: `CORRECT`  → modelo: Haiku
    - otro                            → intent: `CHAT`     → modelo: Haiku
-5. Llamar a Anthropic con prompt estructurado
+5. Llamar al proveedor de IA (Anthropic o Gemini) con prompt estructurado
 6. Parsear respuesta JSON del modelo
 7. Si intent == `REGISTER`: insertar en `transactions` via `TransactionService`
 8. Si intent == `CORRECT`: actualizar transaction + `user_aliases`
@@ -302,6 +302,17 @@ próximas, aliases). Las sumas y agregaciones las hace SQL, no el AI.
 > (`ChatQuotaRepository`) se consume con un `UPDATE` atómico, con tope de 100/mes y 429
 > `RATE_LIMITED`; REGISTER y CORRECT pasan por `TransactionService`; CORRECT hace upsert en
 > `user_aliases`. La llamada a Anthropic se hace **fuera** de cualquier transacción de BD.
+>
+> **Proveedor configurable:** `app.ai.provider` (`AI_PROVIDER`) = `anthropic` (default) | `gemini`.
+> `AIService` sigue siendo la única clase que habla con la IA; con `gemini` cambia solo el
+> request/response HTTP (`POST /v1beta/models/{model}:generateContent`, key en `x-goog-api-key`,
+> texto en `candidates[0].content.parts[].text`, tokens en `usageMetadata.totalTokenCount`). Los
+> prompts, el parseo del JSON del modelo y el 503 `AI_UNAVAILABLE` son los mismos.
+> `chat_messages.model_used` guarda el modelo real. Modelos Gemini: `gemini.model.fast` /
+> `gemini.model.smart` (defaults `gemini-3.5-flash-lite` / `gemini-3.8-flash`, con plan gratuito;
+> `gemini-2.5-flash` está deprecado y se redirige el 2026-12-01). **Gemini gratis es solo para
+> pruebas:** Google puede usar los datos del plan gratuito para entrenar; para usuarios reales,
+> Anthropic o un plan de Gemini con facturación.
 
 ---
 
@@ -351,7 +362,9 @@ DATABASE_URL          jdbc:postgresql://...supabase.co:5432/postgres
 DATABASE_USER         postgres
 DATABASE_PASSWORD     ...
 JWT_SECRET            string aleatorio de mínimo 256 bits (openssl rand -base64 32)
-ANTHROPIC_API_KEY     sk-ant-...
+AI_PROVIDER           anthropic (default) | gemini — proveedor de IA del chat
+ANTHROPIC_API_KEY     sk-ant-... (obligatoria en prod si AI_PROVIDER=anthropic)
+GEMINI_API_KEY        clave de Google AI Studio (obligatoria en prod si AI_PROVIDER=gemini)
 SPRING_PROFILES_ACTIVE prod en Railway (la imagen Docker ya lo trae); dev por defecto en local
 CORS_ALLOWED_ORIGINS  orígenes web permitidos, separados por coma
 ```

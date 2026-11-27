@@ -54,6 +54,23 @@ class ProdProfileStartupTest {
     }
 
     @Test
+    void prodConGeminiSinKeyNoArranca() {
+        assertThatThrownBy(() -> start(Map.of("AI_PROVIDER", "gemini")).close())
+                .rootCause().hasMessageContaining("GEMINI_API_KEY");
+    }
+
+    @Test
+    void prodConGeminiNoExigeAnthropicKey() {
+        start(Map.of("AI_PROVIDER", "gemini", "GEMINI_API_KEY", "AIza-test", "ANTHROPIC_API_KEY", "")).close();
+    }
+
+    @Test
+    void prodConProveedorDeIAInvalidoNoArranca() {
+        assertThatThrownBy(() -> start(Map.of("AI_PROVIDER", "openai")).close())
+                .hasStackTraceContaining("openai");
+    }
+
+    @Test
     void prodConJwtSecretDeDesarrolloNoArranca() {
         assertThatThrownBy(() -> start(Map.of("JWT_SECRET", "hH4d9Xa3M5mskNX0MCXF1+OkKUFPg3nllFdSydPyXv0=")).close())
                 .rootCause().hasMessageContaining("desarrollo");

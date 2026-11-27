@@ -90,7 +90,7 @@ class ChatIntegrationTest extends AbstractIntegrationTest {
         assertThat(aiMessagesUsed()).isEqualTo(1);
 
         ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
-        verify(aiService).sendMessage(eq("claude-haiku-5-5"), system.capture(), anyString());
+        verify(aiService).sendMessage(eq("claude-haiku-4-5"), system.capture(), anyString());
         assertThat(system.getValue()).contains("Mascotas").contains("Supermercado").contains("Otros ingresos");
     }
 

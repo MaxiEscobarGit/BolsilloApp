@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 @Profile("prod")
 public class ProdSecretsValidator implements InitializingBean {
 
+    private final String aiProvider;
     private final String anthropicApiKey;
+    private final String geminiApiKey;
     private final String datasourceUrl;
     private final String datasourcePassword;
     private final String jwtSecret;
@@ -28,11 +30,15 @@ public class ProdSecretsValidator implements InitializingBean {
             "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=");
 
     public ProdSecretsValidator(
-            @Value("${anthropic.api-key}") String anthropicApiKey,
+            @Value("${app.ai.provider:anthropic}") String aiProvider,
+            @Value("${anthropic.api-key:}") String anthropicApiKey,
+            @Value("${gemini.api-key:}") String geminiApiKey,
             @Value("${spring.datasource.url}") String datasourceUrl,
             @Value("${spring.datasource.password}") String datasourcePassword,
             @Value("${app.jwt.secret}") String jwtSecret) {
+        this.aiProvider = aiProvider == null ? "anthropic" : aiProvider.trim().toLowerCase();
         this.anthropicApiKey = anthropicApiKey;
+        this.geminiApiKey = geminiApiKey;
         this.datasourceUrl = datasourceUrl;
         this.datasourcePassword = datasourcePassword;
         this.jwtSecret = jwtSecret;
@@ -42,12 +48,20 @@ public class ProdSecretsValidator implements InitializingBean {
     public void afterPropertiesSet() {
         require(datasourceUrl, "DATABASE_URL");
         require(datasourcePassword, "DATABASE_PASSWORD");
-        require(anthropicApiKey, "ANTHROPIC_API_KEY");
-        if (anthropicApiKey.contains("placeholder")) {
-            throw new IllegalStateException("ANTHROPIC_API_KEY tiene un valor placeholder en prod");
+        switch (aiProvider) {
+            case "anthropic" -> requireKey(anthropicApiKey, "ANTHROPIC_API_KEY");
+            case "gemini" -> requireKey(geminiApiKey, "GEMINI_API_KEY");
+            default -> throw new IllegalStateException("AI_PROVIDER invalido: '" + aiProvider + "' (anthropic | gemini)");
         }
         if (jwtSecret != null && DEV_JWT_SECRETS.contains(jwtSecret.trim())) {
             throw new IllegalStateException("JWT_SECRET es un secret de desarrollo del repo; genera uno propio (openssl rand -base64 32)");
+        }
+    }
+
+    private static void requireKey(String value, String name) {
+        require(value, name);
+        if (value.contains("placeholder")) {
+            throw new IllegalStateException(name + " tiene un valor placeholder en prod");
         }
     }
 
