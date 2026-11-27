@@ -147,3 +147,9 @@ Pasos manuales:
 
 Probar el stack en local: `DOMAIN=localhost` (Caddy usa certificado interno) y
 `docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build`.
+
+## Licencia
+
+© 2026 MaxiEscobarGit. Todos los derechos reservados.
+
+El código se publica solo para consulta, como portfolio. No se otorga permiso para usarlo, copiarlo, modificarlo ni distribuirlo.
