@@ -63,7 +63,7 @@ grep -rnE 'console\.(log|warn|error)' mobile/src
 
 ## 5. Comunicaciones y red
 
-- Prod: TLS lo termina Railway; `server.forward-headers-strategy=native`.
+- Prod: TLS lo termina Caddy (`deploy/Caddyfile`); `server.forward-headers-strategy=native`.
 - App: `mobile/src/lib/api.ts` lanza error si un build de release apunta a `http://`. En dev se usa la
   IP de la LAN por `EXPO_PUBLIC_API_URL`.
 - Sin WebView ni `expo-linking` handlers: `grep -rniE 'webview|Linking\.' mobile/src` vacío. Si aparece

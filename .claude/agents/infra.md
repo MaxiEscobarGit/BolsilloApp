@@ -1,6 +1,6 @@
 ---
 name: infra
-description: "Especialista de infraestructura, build y despliegue de BolsilloApp: `pom.xml`, Maven wrapper, `docker-compose.yml`, Dockerfile, CI (GitHub Actions), configuración general de `application.properties`, variables de entorno y despliegue en Railway / Supabase. Usalo para dependencias, perfiles, contenedores, pipelines o problemas de entorno (timezones, Testcontainers).\n\n<example>\nuser: \"Armá un workflow de CI que corra los tests en cada PR\"\nassistant: \"Uso el agente infra para el pipeline.\"\n</example>"
+description: "Especialista de infraestructura, build y despliegue de BolsilloApp: `pom.xml`, Maven wrapper, `docker-compose.yml`, Dockerfile, CI (GitHub Actions), configuración general de `application.properties`, variables de entorno y despliegue en VPS (`deploy/`: Docker Compose + Caddy). Usalo para dependencias, perfiles, contenedores, pipelines o problemas de entorno (timezones, Testcontainers).\n\n<example>\nuser: \"Armá un workflow de CI que corra los tests en cada PR\"\nassistant: \"Uso el agente infra para el pipeline.\"\n</example>"
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
@@ -32,7 +32,7 @@ No toques código de dominio (`api/src/main/java/**`) ni los bloques de otros m�
   (bug de Windows con `America/Buenos_Aires`). No lo quites.
 - `spring.jpa.hibernate.ddl-auto=validate`: el esquema lo maneja solo Flyway.
 - Secretos (`DATABASE_*`, `JWT_SECRET`, `ANTHROPIC_API_KEY`) solo por variables de entorno
-  (Railway en prod, `api/.env` con `spring-dotenv` en local). Nunca subir `.env`; nunca poner secretos en CI en claro.
+  (`deploy/.env` en el VPS en prod, `api/.env` con `spring-dotenv` en local). Nunca subir `.env`; nunca poner secretos en CI en claro.
 - Tests: Testcontainers (`postgres:16-alpine`), requieren Docker; en CI usar un runner con Docker.
   Comando: `cd api && ./mvnw test`.
 - DB local: `docker compose up -d` desde la raíz (Postgres 16 + pgAdmin, solo desarrollo).

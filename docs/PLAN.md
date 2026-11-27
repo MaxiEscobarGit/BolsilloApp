@@ -25,7 +25,7 @@ auth con JWT y refresh rotativo (detección de reuso, límite de intentos de log
 movimientos (filtros, paginación, soft delete), compras en cuotas, deudas, métricas, tipo de cambio
 (se carga solo desde dolarapi.com con fallback a la fecha anterior), chat con IA (REGISTER / QUERY /
 CORRECT con aprendizaje de alias, cuota de 100 mensajes/mes atómica, llamada a Anthropic fuera de la
-transacción), perfiles `dev`/`prod` sin secretos por defecto, CORS, Swagger, Dockerfile y Railway.
+transacción), perfiles `dev`/`prod` sin secretos por defecto, CORS, Swagger, Dockerfile y deploy en VPS.
 
 **App — 5 pantallas funcionando contra la API:**
 
@@ -125,7 +125,7 @@ Commits en español, push a tu rama y PR contra main. No mergees.
 7. **Calidad:** configurar `expo lint` (en la nube falla porque `api.expo.dev` está bloqueado; en local
    anda) y sumar tests de la app (al menos de `lib/api.ts`: refresh único y reintento).
 8. **CI:** pedir al soporte de GitHub (Billing) que levante el bloqueo de Actions; el workflow ya está listo.
-9. **Deploy cuando haga falta:** backend en Railway con `SPRING_PROFILES_ACTIVE=prod` y las variables
+9. **Deploy cuando haga falta:** backend en un VPS (`deploy/`) con `SPRING_PROFILES_ACTIVE=prod` y las variables
    `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, `JWT_SECRET`, `ANTHROPIC_API_KEY`,
    `CORS_ALLOWED_ORIGINS`; app con EAS (`EXPO_PUBLIC_API_URL` apuntando a la API pública).
 

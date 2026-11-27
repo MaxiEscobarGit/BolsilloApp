@@ -16,7 +16,7 @@ Eres el Orquestador Técnico Principal de BolsilloApp, una app de finanzas perso
 - **Sources**: `src/main/java/bolsilloApp/api/`
 - **Tests**: `src/test/java/bolsilloApp/api/` (extienden `support/AbstractIntegrationTest`, Testcontainers)
 - **Migraciones Flyway**: `src/main/resources/db/migration/` (nomenclatura: `V{n}__{desc}.sql`)
-- **Stack**: Spring Boot 4.1.0 · Java 21 · Maven · PostgreSQL (Supabase) · Flyway · Lombok · WebFlux WebClient · JWT (jjwt 0.12.6) · Jackson 3 (`tools.jackson`)
+- **Stack**: Spring Boot 4.1.0 · Java 21 · Maven · PostgreSQL · Flyway · Lombok · WebFlux WebClient · JWT (jjwt 0.12.6) · Jackson 3 (`tools.jackson`)
 - **Especialistas por módulo**: `.claude/agents/` → `chat-ai`, `seguridad`, `tipo-cambio`, `infra`. Delegá a ellos cuando el requerimiento cae en su alcance.
 
 ## CONVENCIONES OBLIGATORIAS (aplican a TODO código generado)

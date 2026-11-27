@@ -98,29 +98,13 @@ docker compose --profile api up -d --build
 
 Para correr lo mismo en local: `cd api && mvn -B verify` (necesita Docker corriendo).
 
-## Deploy (Railway)
-
-`railway.json` en la raíz configura el build con `api/Dockerfile` (contexto `api/`) y el
-healthcheck en `/actuator/health`.
-
-La imagen arranca en perfil **`prod`** por defecto (`SPRING_PROFILES_ACTIVE=prod` en el
-Dockerfile), que no tiene valores por defecto: si falta alguna variable, la app no arranca.
-Variables obligatorias en Railway:
-
-- `DATABASE_URL` (JDBC de Supabase)
-- `DATABASE_USER`
-- `DATABASE_PASSWORD`
-- `JWT_SECRET`
-- `ANTHROPIC_API_KEY` (o `GEMINI_API_KEY` si `AI_PROVIDER=gemini`; solo una de las dos)
-- `CORS_ALLOWED_ORIGINS` (orígenes web permitidos, separados por coma)
-
-`PORT` lo inyecta Railway. El `docker compose` local fuerza `SPRING_PROFILES_ACTIVE=dev`.
-
 ## Deploy en VPS
 
-Alternativa a Railway: un VPS (Hostinger KVM 2, Ubuntu 24.04) con Docker. Todo en [`deploy/`](../deploy/):
+Un VPS (Ubuntu 24.04) con Docker. Todo en [`deploy/`](../deploy/):
 Caddy (HTTPS automático + web estática + proxy a `/api/*`), la API y Postgres, solo Caddy expone puertos.
 La API tiene `@Scheduled` sin lock: correr **una sola** instancia.
+
+La imagen arranca en perfil **`prod`**, que no tiene valores por defecto: si falta una variable o se usa un secreto de desarrollo, la API no arranca.
 
 Pasos manuales:
 

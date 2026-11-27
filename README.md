@@ -92,7 +92,7 @@ docker compose --profile api up -d --build
 cd mobile && npm install && npx expo start --web
 ```
 
-Más detalle (pgAdmin, Swagger, variables de entorno y deploy en Railway o en un VPS) en [`docs/DESARROLLO.md`](docs/DESARROLLO.md).
+Más detalle (pgAdmin, Swagger, variables de entorno y deploy en un VPS) en [`docs/DESARROLLO.md`](docs/DESARROLLO.md).
 
 ## Licencia
 
