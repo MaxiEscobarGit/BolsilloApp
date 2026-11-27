@@ -20,7 +20,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /workspace/app.jar app.jar
 USER app
 
-# Railway inyecta PORT; la app lo lee vía server.port=${PORT:8080}
+# El puerto sale de PORT; la app lo lee vía server.port=${PORT:8080}
 # La imagen arranca en perfil prod (sin defaults): faltan variables => no arranca
 ENV PORT=8080 \
     SPRING_PROFILES_ACTIVE=prod \

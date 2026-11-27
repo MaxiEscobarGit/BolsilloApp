@@ -16,7 +16,7 @@ Este directorio (`api/`) es el backend. La app (mobile first, Expo / React Nativ
 |-----------------|----------------------------------------------------------------------------|
 | Backend         | Spring Boot **4.1.0** · Java 21 · Maven (`./mvnw`)                         |
 | Web             | `spring-boot-starter-webmvc` (servlet, no reactivo)                        |
-| Base de datos   | PostgreSQL 16 (Supabase en prod · `docker-compose.yml` en local)           |
+| Base de datos   | PostgreSQL 16 (en el VPS en prod · `docker-compose.yml` en local)           |
 | ORM             | Spring Data JPA · Hibernate (`ddl-auto=validate`)                          |
 | Migraciones     | Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`)       |
 | Auth            | Spring Security · JWT (jjwt 0.12.6) · refresh tokens rotativos             |
@@ -27,7 +27,7 @@ Este directorio (`api/`) es el backend. La app (mobile first, Expo / React Nativ
 | AI              | Anthropic API — Haiku para parseo, Sonnet para análisis (o Gemini, ver abajo) |
 | Tests           | JUnit 5 · MockMvc · Testcontainers 1.20.4 (`postgres:16-alpine`)           |
 | App             | Expo / React Native en `mobile/` (mobile first; web vía Expo web)          |
-| Despliegue      | Railway (backend) · Supabase (DB)                                          |
+| Despliegue      | VPS con Docker Compose + Caddy (`deploy/`)                                          |
 
 ---
 
@@ -358,20 +358,20 @@ Nomenclatura: `V{n}__{descripcion_snake_case}.sql`. Nunca editar una migración 
 ## Variables de entorno requeridas
 
 ```text
-DATABASE_URL          jdbc:postgresql://...supabase.co:5432/postgres
+DATABASE_URL          jdbc:postgresql://postgres:5432/bolsillo
 DATABASE_USER         postgres
 DATABASE_PASSWORD     ...
 JWT_SECRET            string aleatorio de mínimo 256 bits (openssl rand -base64 32)
 AI_PROVIDER           anthropic (default) | gemini — proveedor de IA del chat
 ANTHROPIC_API_KEY     sk-ant-... (obligatoria en prod si AI_PROVIDER=anthropic)
 GEMINI_API_KEY        clave de Google AI Studio (obligatoria en prod si AI_PROVIDER=gemini)
-SPRING_PROFILES_ACTIVE prod en Railway (la imagen Docker ya lo trae); dev por defecto en local
+SPRING_PROFILES_ACTIVE prod (la imagen Docker ya lo trae); dev por defecto en local
 CORS_ALLOWED_ORIGINS  orígenes web permitidos, separados por coma
 ```
 
 - En desarrollo: archivo `api/.env` (ignorado por git, lo carga `spring-dotenv`).
   Plantilla en `api/.env.example`. La DB local se levanta con `docker compose up -d` desde la raíz.
-- En producción: variables de entorno en Railway.
+- En producción: `deploy/.env` en el VPS (ver `docs/DESARROLLO.md`).
 - `application.properties` no tiene defaults de secretos. Los defaults locales viven en
   `application-dev.properties` (perfil por defecto). `application-prod.properties` no tiene
   defaults: si falta una variable, la app no arranca.
@@ -469,7 +469,7 @@ Cuando varios agentes (o personas) trabajan a la vez sobre el backend:
 - [x] Chat — integración Anthropic con el flujo descrito arriba
 - [x] Tipo de cambio — carga automática desde dolarapi + fallback a fecha anterior
 - [x] Seguridad — perfiles dev/prod, CORS, límite de intentos de login
-- [x] Infra — Dockerfile, Railway, CI (GitHub Actions), OpenAPI/Swagger, actuator
+- [x] Infra — Dockerfile, deploy en VPS, CI (GitHub Actions), OpenAPI/Swagger, actuator
 
 ### V2 (no tocar ahora)
 
