@@ -1,149 +1,101 @@
-# BolsilloApp
+# Bolsillo
 
-App de finanzas personales con asistente AI conversacional.
+**App de finanzas personales con un asistente de IA.** Le contás qué gastaste como se lo dirías a un amigo ("gasté 12 lucas en el súper") y el asistente lo registra, lo categoriza y responde preguntas sobre tus gastos.
 
-## Desarrollo local
+Backend en **Spring Boot 4 + PostgreSQL** y app móvil en **Expo / React Native**, con tests de integración, CI, escaneo de seguridad y deploy en contenedores.
 
-**Requisitos:** Docker, Java 21, Maven
+<p align="center">
+  <img src="docs/capturas/inicio.png" width="240" alt="Inicio: saldo del mes, gasto por día y deudas">
+  <img src="docs/capturas/asistente.png" width="240" alt="Asistente: registrar un gasto y consultar en lenguaje natural">
+  <img src="docs/capturas/presupuestos-metas.png" width="240" alt="Presupuestos por categoría y metas de ahorro">
+</p>
+<p align="center">
+  <img src="docs/capturas/movimientos.png" width="240" alt="Movimientos con búsqueda y filtros">
+  <img src="docs/capturas/deudas.png" width="240" alt="Deudas y compras en cuotas">
+  <img src="docs/capturas/fijos.png" width="240" alt="Movimientos fijos de cada mes">
+</p>
 
-### Levantar la base de datos
+## Funcionalidades
 
-Copia `.env.example` a `.env` y completá las variables:
+- **Asistente conversacional:** detecta la intención del mensaje (registrar, consultar, corregir o charlar), extrae monto, moneda y categoría, y aprende alias propios ("el chino" → Supermercado). Arma un resumen del mes comparado con el anterior.
+- **Multimoneda:** ARS y USD, con cotizaciones oficial, blue, MEP y tarjeta que se actualizan solas durante el día.
+- **Movimientos:** búsqueda, filtros por tipo y categoría, y exportación a CSV.
+- **Presupuestos** mensuales por categoría, con aviso cuando te pasás.
+- **Metas de ahorro**, con cuánto tenés que separar por mes para llegar.
+- **Deudas** (te deben / debés) y **compras en cuotas**, con la próxima cuota a vencer.
+- **Movimientos fijos** (sueldo, alquiler, servicios) que se cargan solos cada mes.
+- **Categorías propias**, con ícono y color.
+
+## Stack
+
+| | |
+|---|---|
+| **Backend** | Java 21, Spring Boot 4 (Web, Security, Data JPA, Validation), PostgreSQL 16, Flyway, JWT (jjwt), WebClient |
+| **IA** | Claude (Anthropic): Haiku para interpretar mensajes y Sonnet para análisis. El proveedor es configurable (Anthropic o Gemini) |
+| **App** | Expo SDK 58, React Native, Expo Router, Reanimated, Secure Store, TypeScript |
+| **Tests** | JUnit 5 + Testcontainers (PostgreSQL real), 190 tests |
+| **Infra** | Docker multi-stage, Docker Compose, Caddy (HTTPS), GitHub Actions, GHCR, Dependabot |
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    App["App Expo<br/>(iOS · Android · Web)"] -- "HTTPS + JWT" --> Caddy["Caddy<br/>TLS · HSTS · headers"]
+    Caddy -- "/api/*" --> API["API Spring Boot"]
+    API --> DB[("PostgreSQL")]
+    API -- "interpretar y analizar" --> AI["Claude (Anthropic)"]
+    API -- "cotizaciones (cron)" --> FX["dolarapi.com"]
+```
+
+La API está organizada **por módulo de negocio** (`auth`, `transactions`, `chat`, `budgets`, `goals`, `recurring`, `debts`, `purchases`, `exchangerates`, `metrics`…), cada uno con su controller, service, repository y DTOs.
+
+**Cómo funciona el asistente:** el modelo no tiene acceso a la base. Recibe el mensaje y un contexto compacto con las métricas del usuario, y devuelve un JSON con la intención y los datos. El backend valida ese JSON y ejecuta la acción siempre con el usuario del token, así que un mensaje malicioso no puede tocar datos de otra persona. Cada usuario tiene una cuota mensual de mensajes de IA, que se descuenta en una operación atómica.
+
+## Decisiones técnicas destacadas
+
+- **Montos en centavos (`long`)** y conversión a ARS guardada con la cotización del día, para no arrastrar errores de punto flotante ni recalcular el historial.
+- **Refresh tokens rotativos:** se guarda solo el hash SHA-256 y, si alguien reusa un token, se revocan todas las sesiones del usuario.
+- **Aislamiento entre usuarios:** todas las consultas filtran por el usuario autenticado, incluidas las de SQL nativo.
+- **Perfiles `dev` y `prod`:** prod no tiene valores por defecto y no arranca si falta una variable o si detecta un secreto de desarrollo.
+- **Migraciones versionadas** con Flyway e Hibernate en modo `validate`.
+
+## Seguridad
+
+- **Autenticación:** contraseñas con BCrypt, límite de intentos de login y de registro guardado en la base, JWT de 15 minutos y CORS explícito.
+- **Errores:** las respuestas no muestran stacktraces ni detalles internos, y en producción solo se expone `/actuator/health`.
+- **Entradas:** todas se validan (tamaños, montos, moneda), y el CSV exportado se protege contra inyección de fórmulas.
+- **App:** el token se guarda en el Keychain/Keystore, el build de release exige HTTPS y Android no respalda los datos de la app.
+- **Infraestructura:**
+  - Caddy con TLS 1.2/1.3, HSTS, CSP y cabeceras de seguridad.
+  - Contenedores sin root, en solo lectura y sin capabilities.
+  - La base no se expone a internet.
+  - Backups diarios cifrados con [age](https://age-encryption.org).
+- **CI:** gitleaks sobre todo el historial, Trivy sobre la imagen Docker (falla con CVE críticas o altas que tengan arreglo) y Dependabot semanal.
+
+## CI/CD
+
+Cada PR corre los tests del backend con Testcontainers, el chequeo de tipos y el lint de la app, el build de la imagen Docker, gitleaks y Trivy. Al mergear a `main`, la imagen se publica en GitHub Container Registry y se puede desplegar por SSH a un VPS, con verificación de salud por HTTPS.
+
+## Correrlo en local
+
+Requisitos: Docker, Java 21 y Node 22.
 
 ```bash
 cp .env.example .env
 ```
 
-Luego levantá los contenedores:
-
-```bash
-docker compose up -d
-```
-
-Para bajarlos:
-
-```bash
-docker compose down
-```
-
-### pgAdmin
-
-Accedé a [http://localhost:5050](http://localhost:5050) con las credenciales `PGADMIN_EMAIL` y `PGADMIN_PASSWORD` del `.env`.
-
-Para conectar pgAdmin al contenedor de Postgres:
-
-1. Click en **Add New Server**
-2. En la pestaña **General**, poné cualquier nombre (ej: `finanzas-dev`)
-3. En la pestaña **Connection**:
-   - **Host**: `finanzas-db` (nombre del container, resuelto por la red Docker)
-   - **Port**: `5432`
-   - **Database**: `finanzas_dev`
-   - **Username**: `postgres`
-   - **Password**: el valor de `DB_PASSWORD` en tu `.env`
-4. Click en **Save**
-
-### Arrancar Spring Boot
-
-```bash
-cd api
-./mvnw spring-boot:run
-```
-
-### App (Expo / React Native)
-
-La app vive en [`mobile/`](mobile/README.md): mobile first, también corre en web. Ver ahí cómo arrancarla.
-
-### Swagger / OpenAPI
-
-Con la API corriendo:
-
-- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- Spec JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
-
-Para probar endpoints protegidos: hacé `POST /api/auth/login`, copiá el `accessToken`
-y pegalo en el botón **Authorize** (esquema Bearer JWT, sin el prefijo `Bearer`).
-
-Healthcheck público: `GET /actuator/health` (es el único endpoint de actuator expuesto).
-
-## Docker
-
-La imagen se buildea desde `api/` (multi-stage: Maven + JDK 21 → JRE 21 Alpine, usuario no root).
-
-```bash
-docker build -t bolsillo-api ./api
-docker run --rm -p 8080:8080 \
-  -e DATABASE_URL=jdbc:postgresql://host.docker.internal:5432/finanzas_dev \
-  -e DATABASE_USER=postgres -e DATABASE_PASSWORD=... \
-  -e JWT_SECRET=... -e ANTHROPIC_API_KEY=... \
-  bolsillo-api
-```
-
-El puerto se toma de la variable `PORT` (default `8080`); JVM tuneable con `JAVA_OPTS`.
-
-### Todo junto con docker compose
-
-El servicio `api` está bajo el perfil opcional `api`, así que `docker compose up -d` sigue
-levantando solo la DB y pgAdmin. Para levantar también la API:
-
 ```bash
 docker compose --profile api up -d --build
 ```
 
-`JWT_SECRET` y `ANTHROPIC_API_KEY` se leen del `.env` de la raíz (si están vacíos usa defaults de desarrollo).
+```bash
+cd mobile && npm install && npx expo start --web
+```
 
-## CI
+Más detalle (pgAdmin, Swagger, variables de entorno y deploy en Railway o en un VPS) en [`docs/DESARROLLO.md`](docs/DESARROLLO.md).
 
-`.github/workflows/ci.yml` corre en cada push a `main` y en cada PR:
+## Licencia
 
-- `mvn -B verify` en `api/` con Temurin 21 y cache de Maven (los tests usan Testcontainers, Docker ya viene en los runners de GitHub).
-- Build de la imagen Docker (sin push) para detectar roturas del `Dockerfile`.
+© 2026 MaxiEscobarGit. Todos los derechos reservados.
 
-Para correr lo mismo en local: `cd api && mvn -B verify` (necesita Docker corriendo).
-
-## Deploy (Railway)
-
-`railway.json` en la raíz configura el build con `api/Dockerfile` (contexto `api/`) y el
-healthcheck en `/actuator/health`.
-
-La imagen arranca en perfil **`prod`** por defecto (`SPRING_PROFILES_ACTIVE=prod` en el
-Dockerfile), que no tiene valores por defecto: si falta alguna variable, la app no arranca.
-Variables obligatorias en Railway:
-
-- `DATABASE_URL` (JDBC de Supabase)
-- `DATABASE_USER`
-- `DATABASE_PASSWORD`
-- `JWT_SECRET`
-- `ANTHROPIC_API_KEY` (o `GEMINI_API_KEY` si `AI_PROVIDER=gemini`; solo una de las dos)
-- `CORS_ALLOWED_ORIGINS` (orígenes web permitidos, separados por coma)
-
-`PORT` lo inyecta Railway. El `docker compose` local fuerza `SPRING_PROFILES_ACTIVE=dev`.
-
-## Deploy en VPS
-
-Alternativa a Railway: un VPS (Hostinger KVM 2, Ubuntu 24.04) con Docker. Todo en [`deploy/`](deploy/):
-Caddy (HTTPS automático + web estática + proxy a `/api/*`), la API y Postgres, solo Caddy expone puertos.
-La API tiene `@Scheduled` sin lock: correr **una sola** instancia.
-
-Pasos manuales:
-
-1. **Contratar** el VPS (Ubuntu 24.04) y anotar la IP. Generá una clave SSH propia si no tenés (`ssh-keygen -t ed25519`).
-2. **DNS en Cloudflare**: registro `A` de tu dominio hacia la IP, en modo *DNS only* (nube gris) para que Caddy obtenga el certificado.
-3. **Bootstrap** (como root, una vez): copiá `deploy/bootstrap-vps.sh` y tu clave pública (`.pub`) al VPS y corré
-   `DEPLOY_PUBKEY_FILE=./clave.pub ./bootstrap-vps.sh`. Crea el usuario `deploy`, SSH solo por clave, ufw, fail2ban,
-   actualizaciones automáticas y Docker. Probá `ssh deploy@IP` en otra terminal antes de cerrar la sesión.
-4. **Cargar `deploy/.env`** en el VPS: `mkdir -p ~/bolsillo/deploy && nano ~/bolsillo/deploy/.env` a partir de
-   `deploy/.env.example` (contraseñas solo alfanuméricas; `API_IMAGE=ghcr.io/<owner-en-minúsculas>/bolsillo-api`). `chmod 600`.
-5. **Web**: `cd mobile && EXPO_PUBLIC_API_URL=https://<tu-dominio> npx expo export -p web` y subí `mobile/dist/*` a `~/bolsillo/deploy/web/` del VPS (`rsync -a --delete`).
-6. **Secrets de GitHub** (Settings > Secrets > Actions; idealmente en el environment `production`):
-   `VPS_HOST`, `VPS_USER` (`deploy`), `VPS_SSH_KEY` (clave privada dedicada al deploy, cuya pública está en el VPS),
-   `VPS_KNOWN_HOSTS` (salida de `ssh-keyscan -t ed25519 IP`, verificá el fingerprint contra el del panel del proveedor),
-   `VPS_DOMAIN` (para el chequeo de health).
-   Después creá la **variable** de repo `DEPLOY_ENABLED=true` (Settings > Variables > Actions): sin ella el job de deploy no corre.
-7. **Primer deploy**: push a `main` (o *Run workflow* en `Deploy`). El workflow escanea el repo (gitleaks) y la imagen (Trivy),
-   publica en GHCR, copia compose/Caddyfile al VPS, hace `pull` + `up -d` y verifica `/actuator/health` por HTTPS.
-   Si el paquete en GHCR es privado, el deploy usa el `GITHUB_TOKEN` del job para el pull.
-8. **Backups y restore**: configurá el timer de backup y probá el restore siguiendo [`deploy/restore.md`](deploy/restore.md)
-   (bucket de R2, claves S3 y clave pública de age en el `.env`).
-
-Probar el stack en local: `DOMAIN=localhost` (Caddy usa certificado interno) y
-`docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build`.
+El código se publica solo para consulta, como portfolio. No se otorga permiso para usarlo, copiarlo, modificarlo ni distribuirlo.
